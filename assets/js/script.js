@@ -33,6 +33,8 @@ if (isViewOnlyPreview) {
   document.querySelector("#preview-support-note").hidden = false;
   document.querySelector("#support-form").hidden = true;
   document.querySelector("#support .heading p").textContent = "Customer service is unavailable in this view-only preview.";
+  document.querySelector("#newsletter form").hidden = true;
+  document.querySelector("#newsletter p").textContent = "Newsletter sign-up is unavailable in this view-only preview.";
 }
 
 let currentUser = null;
