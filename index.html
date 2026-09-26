@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent My Ride | Car Rental Website</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+
+<body>
+    <header class="site-header">
+        <nav class="nav container" aria-label="Main navigation">
+            <a href="#home" class="logo">Rent<span>My</span>Ride<span>.</span></a>
+
+            <div class="navbar" id="navbar">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#trending" class="nav-link">Trending</a>
+                <a href="#cars" class="nav-link">Cars</a>
+                <a href="#team" class="nav-link">Team</a>
+                <a href="#reviews" class="nav-link">Reviews</a>
+            </div>
+
+            <div class="nav-icons">
+                <button class="icon-btn" type="button" aria-label="Search vehicles">
+                    <i class="ri-search-line"></i>
+                </button>
+                <button class="icon-btn user-trigger" type="button" aria-label="Open login">
+                    <i class="ri-user-line"></i>
+                </button>
+                <button class="menu-icon" type="button" aria-label="Open menu" aria-controls="navbar"
+                    aria-expanded="false">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="home" id="home">
+            <div class="home-content container">
+                <div class="home-copy">
+                    <span>Premium car rentals</span>
+                    <h1>Book the right ride for every road.</h1>
+                    <p>Choose city-friendly hatchbacks, family SUVs, EVs, and premium rentals with simple daily
+                        pricing.</p>
+                </div>
+
+                <div class="home-img">
+                    <img src="assets/images/home.png" alt="Tata Curvv car">
+                </div>
+
+                <form action="#cars" class="input-form" id="vehicle-search-form">
+                    <label class="input-box input-border">
+                        <span>Location</span>
+                        <input type="search" name="location" placeholder="Search place">
+                    </label>
+                    <label class="input-box input-border">
+                        <span>Start</span>
+                        <input type="date" name="start-date" id="start-date">
+                    </label>
+                    <label class="input-box input-border">
+                        <span>Return</span>
+                        <input type="date" name="return-date" id="return-date">
+                    </label>
+                    <button class="search-btn" type="submit" aria-label="Search available cars">
+                        <i class="ri-search-2-line"></i>
+                    </button>
+                    <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+        </section>
+
+        <section class="trending container" id="trending">
+            <div class="heading">
+                <h2>Trending Vehicles</h2>
+            </div>
+
+            <div class="trending-content">
+                <article class="trend-box">
+                    <h4>Sedan</h4>
+                    <img src="assets/images/trend-1.png" alt="Altroz">
+                    <h3>Altroz</h3>
+                    <p>From Rs. 1499<span>/day</span></p>
+                </article>
+                <article class="trend-box">
+                    <h4>SUV</h4>
+                    <img src="assets/images/trend-2.png" alt="Nexon">
+                    <h3>Nexon</h3>
+                    <p>From Rs. 1899<span>/day</span></p>
+                </article>
+                <article class="trend-box">
+                    <h4>SUV</h4>
+                    <img src="assets/images/trend-3.png" alt="Harrier">
+                    <h3>Harrier</h3>
+                    <p>From Rs. 2499<span>/day</span></p>
+                </article>
+                <article class="trend-box">
+                    <h4>EV</h4>
+                    <img src="assets/images/trend-4.png" alt="Curvv EV">
+                    <h3>Curvv EV</h3>
+                    <p>From Rs. 2999<span>/day</span></p>
+                </article>
+            </div>
+        </section>
+
+        <section class="rental container" id="cars">
+            <div class="heading center">
+                <h2>Our Top Rentals</h2>
+                <p>Ride in style, pay less. Travel smart and rent with us.</p>
+            </div>
+
+            <div class="rentals-content">
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Mini SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-1.png" alt="Punch">
+                    <h2>Punch</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 2999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-1">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Mini SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-2.png" alt="Nexon">
+                    <h2>Nexon</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 6999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-2">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-3.png" alt="Harrier">
+                    <h2>Harrier</h2>
+                    <h4>Manual</h4>
+                    <div class="price-btn">
+                        <p>Rs. 4999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-3">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Sedan</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-4.png" alt="Altroz">
+                    <h2>Altroz</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 7999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-4">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Sedan</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-5.png" alt="Tigor">
+                    <h2>Tigor</h2>
+                    <h4>Manual</h4>
+                    <div class="price-btn">
+                        <p>Rs. 1399 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-5">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Mini SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-6.png" alt="Punch">
+                    <h2>Punch</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 5999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-6">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>Mini SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-7.png" alt="Punch">
+                    <h2>Punch</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 1999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-7">Rent</a>
+                    </div>
+                </article>
+
+                <article class="rental-box">
+                    <div class="rental-top">
+                        <h3>SUV</h3>
+                        <i class="ri-heart-3-line"></i>
+                    </div>
+                    <img src="assets/images/rental-8.png" alt="GTS40">
+                    <h2>GTS40</h2>
+                    <h4>Automatic</h4>
+                    <div class="price-btn">
+                        <p>Rs. 11999 <span>/day</span></p>
+                        <a href="#" class="rental-btn" data-car-id="rental-8">Rent</a>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="team container" id="team">
+            <div class="heading center">
+                <h2>Meet Our Experts</h2>
+            </div>
+
+            <div class="team-content">
+                <article class="team-box">
+                    <img src="assets/images/team-1.jpeg" alt="Ratan Tata">
+                    <h2>Ratan Tata</h2>
+                    <span>Founder and CEO</span>
+                    <p>I don't believe in taking the right decisions. I take decisions and then make them right.</p>
+                </article>
+                <article class="team-box">
+                    <img src="assets/images/team-2.jpeg" alt="Nirmala Sitharaman">
+                    <h2>Nirmala Sitharaman</h2>
+                    <span>Finance Head</span>
+                    <p>I will stand firm in challenges and make decisions with courage.</p>
+                </article>
+                <article class="team-box">
+                    <img src="assets/images/team-3.jpeg" alt="Mukesh Ambani">
+                    <h2>Mukesh Ambani</h2>
+                    <span>Chairman</span>
+                    <p>My ambition will be bigger than my fear.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="reviews container" id="reviews">
+            <div class="heading center">
+                <h2>Our Customers</h2>
+            </div>
+
+            <div class="reviews-content">
+                <article class="t-box">
+                    <div class="stars" aria-label="5 stars">
+                        <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i
+                            class="ri-star-fill"></i><i class="ri-star-fill"></i>
+                    </div>
+                    <p>"Quick booking, clean car, and transparent pricing. The whole weekend trip felt effortless."</p>
+                    <div class="profile">
+                        <img src="assets/images/profile-1.png" alt="Sahil Sukumar">
+                        <div class="profile-data">
+                            <h3>Sahil Sukumar</h3>
+                            <span>Kolkata</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="t-box">
+                    <div class="stars" aria-label="5 stars">
+                        <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i
+                            class="ri-star-fill"></i><i class="ri-star-fill"></i>
+                    </div>
+                    <p>"The Nexon was ready on time and the return process took just a few minutes."</p>
+                    <div class="profile">
+                        <img src="assets/images/profile-2.png" alt="Mohan Pal">
+                        <div class="profile-data">
+                            <h3>Mohan Pal</h3>
+                            <span>Noida</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="t-box">
+                    <div class="stars" aria-label="5 stars">
+                        <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i
+                            class="ri-star-fill"></i><i class="ri-star-fill"></i>
+                    </div>
+                    <p>"Great car choices and helpful support. I found exactly what I needed for my family."</p>
+                    <div class="profile">
+                        <img src="assets/images/profile-3.png" alt="Anuj Singh">
+                        <div class="profile-data">
+                            <h3>Anuj Singh</h3>
+                            <span>Mumbai</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="t-box">
+                    <div class="stars" aria-label="5 stars">
+                        <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i
+                            class="ri-star-fill"></i><i class="ri-star-fill"></i>
+                    </div>
+                    <p>"Simple website, good prices, and no last-minute surprises. I will book again."</p>
+                    <div class="profile">
+                        <img src="assets/images/profile-4.png" alt="Rajkumar Rao">
+                        <div class="profile-data">
+                            <h3>Rajkumar Rao</h3>
+                            <span>Delhi</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="newsletter container" id="newsletter">
+            <h2>Subscribe and Get 20% Discount</h2>
+            <p>Get rental offers, new fleet updates, and travel deals in your inbox.</p>
+            <form action="#">
+                <input type="email" name="email" class="email" placeholder="Email address" required>
+                <button type="submit" class="s-btn">Subscribe</button>
+            </form>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content container">
+            <div class="footer-box">
+                <a href="#home" class="logo">Rent<span>My</span>Ride<span>.</span></a>
+                <p>Kolkata, Newtown | 746595</p>
+                <div class="social">
+                    <a href="#" aria-label="Instagram"><i class="ri-instagram-line"></i></a>
+                    <a href="#" aria-label="Facebook"><i class="ri-facebook-circle-fill"></i></a>
+                    <a href="#" aria-label="X"><i class="ri-twitter-x-line"></i></a>
+                    <a href="#" aria-label="YouTube"><i class="ri-youtube-fill"></i></a>
+                </div>
+            </div>
+
+            <div class="footer-box">
+                <h3>Opening</h3>
+                <p><span>Mon - Fri</span>: 9:00 - 20:00</p>
+                <p><span>Saturday</span>: 10:00 - 18:00</p>
+                <p><span>Sunday</span>: 10:00 - 16:00</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="login-modal" id="login-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-login></div>
+        <section class="login-card" role="dialog" aria-modal="true" aria-labelledby="login-title">
+            <button class="close-login" type="button" aria-label="Close login" data-close-login>
+                <i class="ri-close-line"></i>
+            </button>
+            <div id="auth-view">
+                <span class="login-kicker" id="auth-kicker">Welcome back</span>
+                <h2 id="login-title">Login to RentMyRide</h2>
+                <p id="auth-description">Sign in to manage your rentals and continue booking.</p>
+
+                <form class="login-form" id="login-form">
+                    <label id="name-field" hidden>
+                        <span>Full name</span>
+                        <input type="text" name="name" autocomplete="name" maxlength="80" placeholder="Your name">
+                    </label>
+                    <label>
+                        <span>Email</span>
+                        <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input type="password" name="password" autocomplete="current-password" placeholder="At least 8 characters" minlength="8" required>
+                    </label>
+                    <div class="login-options" id="login-options">
+                        <label class="remember">
+                            <input type="checkbox" name="remember">
+                            <span>Keep me signed in</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="login-submit" id="login-submit">Login</button>
+                    <p class="login-message" id="login-message" role="status" aria-live="polite"></p>
+                </form>
+
+                <div class="signup-row">
+                    <span id="auth-switch-label">New here?</span>
+                    <button type="button" id="auth-mode-toggle">Create account</button>
+                </div>
+            </div>
+
+            <div id="profile-view" hidden>
+                <span class="login-kicker">Your account</span>
+                <h2 id="profile-email"></h2>
+                <h3 class="booking-history-title">Your bookings</h3>
+                <div class="booking-history" id="booking-history" aria-live="polite"></div>
+                <p class="login-message" id="profile-message" role="status" aria-live="polite"></p>
+                <button type="button" class="logout-button" id="logout-button">
+                    <i class="ri-logout-box-r-line" aria-hidden="true"></i> Log out
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <div class="login-modal" id="booking-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-booking></div>
+        <section class="login-card booking-card" role="dialog" aria-modal="true" aria-labelledby="booking-title">
+            <button class="close-login" type="button" aria-label="Close booking" data-close-booking>
+                <i class="ri-close-line"></i>
+            </button>
+            <span class="login-kicker">Reserve your ride</span>
+            <h2 id="booking-title">Book this car</h2>
+            <div class="booking-car-summary" id="booking-car-summary"></div>
+            <form class="login-form" id="booking-form">
+                <label>
+                    <span>Pick-up date</span>
+                    <input type="date" name="startDate" id="booking-start-date" required>
+                </label>
+                <label>
+                    <span>Return date</span>
+                    <input type="date" name="returnDate" id="booking-return-date" required>
+                </label>
+                <div class="booking-total">
+                    <span id="booking-days">1 day</span>
+                    <strong id="booking-estimate">Rs. 0</strong>
+                </div>
+                <button type="submit" class="login-submit" id="payment-submit">
+                    <i class="ri-lock-line" aria-hidden="true"></i> Continue to secure payment
+                </button>
+                <p class="login-message" id="payment-message" role="status" aria-live="polite"></p>
+            </form>
+        </section>
+    </div>
+
+    <script src="assets/js/script.js"></script>
+</body>
+
+</html>

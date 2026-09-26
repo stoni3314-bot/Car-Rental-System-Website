@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: rentmyride-app
+    runtime: node
+    plan: starter
+    buildCommand: npm run check
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: rentmyride-data
+      mountPath: /var/data
+      sizeGB: 1

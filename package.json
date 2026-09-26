@@ -1,0 +1,13 @@
+{
+  "name": "rentmyride-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check server.js && node --check assets/js/script.js",
+    "start": "node server.js"
+  }
+}
