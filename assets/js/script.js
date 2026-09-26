@@ -15,6 +15,25 @@ const emailInput = loginForm.querySelector('input[name="email"]');
 const passwordInput = loginForm.querySelector('input[name="password"]');
 const bookingStart = document.querySelector("#booking-start-date");
 const bookingReturn = document.querySelector("#booking-return-date");
+const isViewOnlyPreview = window.location.hostname.endsWith(".github.io");
+const previewCars = [
+  { id: "rental-1", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 2999, image: "assets/images/rental-1.png" },
+  { id: "rental-2", category: "Mini SUV", name: "Nexon", transmission: "Automatic", dailyRate: 6999, image: "assets/images/rental-2.png" },
+  { id: "rental-3", category: "SUV", name: "Harrier", transmission: "Manual", dailyRate: 4999, image: "assets/images/rental-3.png" },
+  { id: "rental-4", category: "Sedan", name: "Altroz", transmission: "Automatic", dailyRate: 7999, image: "assets/images/rental-4.png" },
+  { id: "rental-5", category: "Sedan", name: "Tigor", transmission: "Manual", dailyRate: 1399, image: "assets/images/rental-5.png" },
+  { id: "rental-6", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 5999, image: "assets/images/rental-6.png" },
+  { id: "rental-7", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 1999, image: "assets/images/rental-7.png" },
+  { id: "rental-8", category: "SUV", name: "GTS40", transmission: "Automatic", dailyRate: 11999, image: "assets/images/rental-8.png" },
+];
+
+if (isViewOnlyPreview) {
+  document.body.classList.add("view-only-preview");
+  document.querySelector("#preview-rental-note").hidden = false;
+  document.querySelector("#preview-support-note").hidden = false;
+  document.querySelector("#support-form").hidden = true;
+  document.querySelector("#support .heading p").textContent = "Customer service is unavailable in this view-only preview.";
+}
 
 let currentUser = null;
 let authMode = "login";
@@ -143,52 +162,64 @@ const loadBookings = async () => {
   }
 };
 
-const loadCars = async () => {
+const renderCars = (cars) => {
   const grid = document.querySelector("#rentals-content");
-  const status = document.querySelector("#car-list-status");
   grid.replaceChildren();
-  try {
-    const { cars } = await api("/api/cars");
-    carCatalog = cars;
-    status.textContent = cars.length ? "" : "No cars are currently listed.";
-    cars.forEach((car) => {
-      const card = document.createElement("article");
-      card.className = "rental-box";
-      const top = document.createElement("div");
-      top.className = "rental-top";
-      const category = document.createElement("h3");
-      category.textContent = car.category;
-      const icon = document.createElement("i");
-      icon.className = "ri-car-line";
-      icon.setAttribute("aria-hidden", "true");
-      top.append(category, icon);
+  carCatalog = cars;
+  cars.forEach((car) => {
+    const card = document.createElement("article");
+    card.className = "rental-box";
+    const top = document.createElement("div");
+    top.className = "rental-top";
+    const category = document.createElement("h3");
+    category.textContent = car.category;
+    const icon = document.createElement("i");
+    icon.className = "ri-car-line";
+    icon.setAttribute("aria-hidden", "true");
+    top.append(category, icon);
 
-      const image = document.createElement("img");
-      image.src = car.image;
-      image.alt = car.name;
-      image.loading = "lazy";
-      const name = document.createElement("h2");
-      name.textContent = car.name;
-      const transmission = document.createElement("h4");
-      transmission.textContent = car.transmission;
-      const priceButton = document.createElement("div");
-      priceButton.className = "price-btn";
-      const price = document.createElement("p");
-      price.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} `;
-      const perDay = document.createElement("span");
-      perDay.textContent = "/day";
-      price.append(perDay);
+    const image = document.createElement("img");
+    image.src = car.image;
+    image.alt = car.name;
+    image.loading = "lazy";
+    const name = document.createElement("h2");
+    name.textContent = car.name;
+    const transmission = document.createElement("h4");
+    transmission.textContent = car.transmission;
+    const priceButton = document.createElement("div");
+    priceButton.className = "price-btn";
+    const price = document.createElement("p");
+    price.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} `;
+    const perDay = document.createElement("span");
+    perDay.textContent = "/day";
+    price.append(perDay);
+    priceButton.append(price);
+    if (!isViewOnlyPreview) {
       const rent = document.createElement("button");
       rent.type = "button";
       rent.className = "rental-btn";
       rent.dataset.carId = car.id;
       rent.textContent = "Rent";
-      priceButton.append(price, rent);
-      card.append(top, image, name, transmission, priceButton);
-      grid.append(card);
-    });
+      priceButton.append(rent);
+    }
+    card.append(top, image, name, transmission, priceButton);
+    grid.append(card);
+  });
+};
+
+const loadCars = async () => {
+  const status = document.querySelector("#car-list-status");
+  try {
+    const { cars } = await api("/api/cars");
+    renderCars(cars);
+    status.textContent = cars.length ? "" : "No cars are currently listed.";
   } catch {
-    status.textContent = "Car list could not be loaded. Please refresh the page.";
+    if (isViewOnlyPreview) {
+      renderCars(previewCars);
+      status.textContent = "";
+    } else {
+      status.textContent = "Car list could not be loaded. Please refresh the page.";
+    }
   }
 };
 

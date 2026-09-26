@@ -69,9 +69,11 @@ For captured-payment updates, configure a Razorpay webhook for `payment.captured
 
 ## Public Deployment
 
+For a free view-only website preview, enable GitHub Pages from the `main` branch and `/` (root) folder in repository Settings > Pages. The preview shows the site and sample fleet; login, booking, payments, fleet management, and customer support require the Node.js server and are unavailable on GitHub Pages. Never commit `.env` or real payment/admin credentials to this public repository.
+
 `render.yaml` uses Render's free Node web-service plan and does not attach paid storage. Render Free services sleep after 15 minutes without traffic, and their filesystem is temporary: account, booking, fleet, and customer-support data saved by this app can disappear whenever the service sleeps, restarts, or deploys. The first visit after sleep can take about a minute to load. Use this setup only as a public preview with test data, not for real customer records or reservations. See [Render's free-service limits](https://render.com/docs/free).
 
-Render deploys from a Git repository. Keep the repository private, then create a Blueprint from `render.yaml`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as private Render environment variables. Real payments remain unavailable until valid Razorpay credentials and webhook configuration are added as environment variables; demo payments are disabled in production. The hosted site receives a public `onrender.com` address; a custom domain is optional.
+Render deploys from a Git repository. Create a Blueprint from `render.yaml` and set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as private Render environment variables. Keep all secrets in the hosting provider's environment settings, not in this repository. Real payments remain unavailable until valid Razorpay credentials and webhook configuration are added as environment variables; demo payments are disabled in production. The hosted site receives a public `onrender.com` address; a custom domain is optional.
 
 ## Project Structure
 
