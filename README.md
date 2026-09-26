@@ -47,21 +47,31 @@ The login, account, booking, and payment APIs run in the included Node.js server
     node server.js
     ```
 
-3. Open `http://127.0.0.1:4173` in a browser.
+3. Open `http://localhost:4173` in a browser.
+
+On this Windows PC, the `RentMyRide Local Server` scheduled task runs `start-local.ps1` after sign-in and restarts the server if it exits. This local address works on this computer only; it is not a public URL.
 
 Accounts and bookings are stored locally in `.data/store.json`. Passwords are stored as salted scrypt hashes and login sessions use HTTP-only cookies.
 
+## Fleet Admin and Customer Service
+
+To enable the protected administrator login, set `ADMIN_EMAIL` and a unique password of at least 12 characters in the private `.env` file, then restart the server. Sign in from the account icon using those credentials. Admins can add, edit, and remove cars and review or update customer-service messages. Public registration cannot grant administrator access.
+
+The car list and customer-service form are available to visitors without an account. Messages and fleet changes are saved in `.data/store.json`. The local address `http://localhost:4173` is bound to this PC only. Sharing it over Wi-Fi requires a deliberate LAN setup; internet access requires public hosting.
+
 ## Razorpay Payments
 
-Create Razorpay API keys in test mode and add them to `.env` as `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. Restart the server to enable checkout. The secret key stays on the server; rental prices and totals are calculated by the server, and successful payments are signature-checked with Razorpay before a booking is marked paid.
+For a keyless local walkthrough, set `DEMO_PAYMENTS=true` in `.env`. The checkout will simulate success without collecting card details or charging money. Demo records are explicitly labeled `demo_paid`, are not real payments or reservations, and the server disables this mode whenever `NODE_ENV=production`.
+
+For real online payments, create Razorpay API keys in test mode and add them to `.env` as `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET`. The secret key stays on the server; rental prices and totals are calculated by the server, and successful payments are signature-checked with Razorpay before a booking is marked paid.
 
 For captured-payment updates, configure a Razorpay webhook for `payment.captured` and `payment.failed`, then set its signing secret as `RAZORPAY_WEBHOOK_SECRET`. The webhook endpoint is `/api/payments/webhook`. Use test keys and Razorpay's test payment details before switching to live keys.
 
 ## Public Deployment
 
-`render.yaml` is configured for a Render Node web service with a 1 GB persistent disk mounted at `/var/data`. The disk is required because the site stores account and booking data locally; Render's free web services do not preserve local files across restarts. Render currently lists the smallest always-on web service at $7/month and disk storage at $0.25/GB-month, so this configuration starts at about $7.25 USD/month before taxes or other usage. Check [Render pricing](https://render.com/pricing) before creating the service.
+`render.yaml` uses Render's free Node web-service plan and does not attach paid storage. Render Free services sleep after 15 minutes without traffic, and their filesystem is temporary: account, booking, fleet, and customer-support data saved by this app can disappear whenever the service sleeps, restarts, or deploys. The first visit after sleep can take about a minute to load. Use this setup only as a public preview with test data, not for real customer records or reservations. See [Render's free-service limits](https://render.com/docs/free).
 
-Render deploys from a Git repository. Keep the repository private, then create a Blueprint from `render.yaml`. Add Razorpay keys as Render environment variables after deployment to enable online payments. The hosted site receives a public `onrender.com` address; a custom domain is optional.
+Render deploys from a Git repository. Keep the repository private, then create a Blueprint from `render.yaml`. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` as private Render environment variables. Real payments remain unavailable until valid Razorpay credentials and webhook configuration are added as environment variables; demo payments are disabled in production. The hosted site receives a public `onrender.com` address; a custom domain is optional.
 
 ## Project Structure
 

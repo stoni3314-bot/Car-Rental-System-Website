@@ -19,16 +19,16 @@ const mimeTypes = {
   ".svg": "image/svg+xml",
 };
 
-const catalog = {
-  "rental-1": { name: "Punch", dailyRate: 2999 },
-  "rental-2": { name: "Nexon", dailyRate: 6999 },
-  "rental-3": { name: "Harrier", dailyRate: 4999 },
-  "rental-4": { name: "Altroz", dailyRate: 7999 },
-  "rental-5": { name: "Tigor", dailyRate: 1399 },
-  "rental-6": { name: "Punch", dailyRate: 5999 },
-  "rental-7": { name: "Punch", dailyRate: 1999 },
-  "rental-8": { name: "GTS40", dailyRate: 11999 },
-};
+const defaultCars = [
+  { id: "rental-1", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 2999, image: "assets/images/rental-1.png" },
+  { id: "rental-2", category: "Mini SUV", name: "Nexon", transmission: "Automatic", dailyRate: 6999, image: "assets/images/rental-2.png" },
+  { id: "rental-3", category: "SUV", name: "Harrier", transmission: "Manual", dailyRate: 4999, image: "assets/images/rental-3.png" },
+  { id: "rental-4", category: "Sedan", name: "Altroz", transmission: "Automatic", dailyRate: 7999, image: "assets/images/rental-4.png" },
+  { id: "rental-5", category: "Sedan", name: "Tigor", transmission: "Manual", dailyRate: 1399, image: "assets/images/rental-5.png" },
+  { id: "rental-6", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 5999, image: "assets/images/rental-6.png" },
+  { id: "rental-7", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 1999, image: "assets/images/rental-7.png" },
+  { id: "rental-8", category: "SUV", name: "GTS40", transmission: "Automatic", dailyRate: 11999, image: "assets/images/rental-8.png" },
+];
 const pendingRegistrationEmails = new Set();
 const dummySalt = "rentmyride-fixed-login-salt";
 const dummyPasswordHash = crypto.scryptSync("invalid-password", dummySalt, 64).toString("hex");
@@ -47,7 +47,7 @@ const loadEnvironment = async () => {
   }
 };
 
-const emptyStore = () => ({ users: [], sessions: [], bookings: [], webhookEvents: [] });
+const emptyStore = () => ({ users: [], sessions: [], bookings: [], webhookEvents: [], cars: defaultCars, supportTickets: [] });
 let store = emptyStore();
 let writeQueue = Promise.resolve();
 
@@ -70,6 +70,8 @@ const loadStore = async () => {
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
       bookings: Array.isArray(parsed.bookings) ? parsed.bookings : [],
       webhookEvents: Array.isArray(parsed.webhookEvents) ? parsed.webhookEvents : [],
+      cars: Array.isArray(parsed.cars) ? parsed.cars : defaultCars,
+      supportTickets: Array.isArray(parsed.supportTickets) ? parsed.supportTickets : [],
     };
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
@@ -122,7 +124,11 @@ const readJson = async (request) => {
   }
 };
 
-const publicUser = (user) => ({ id: user.id, name: user.name, email: user.email });
+const publicUser = (user, isAdmin = false) => ({ id: user.id, name: user.name, email: user.email, isAdmin });
+
+const configuredAdminEmail = () => typeof process.env.ADMIN_EMAIL === "string" ? process.env.ADMIN_EMAIL.trim().toLowerCase() : "";
+const adminCredentialsReady = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredAdminEmail())
+  && typeof process.env.ADMIN_PASSWORD === "string" && process.env.ADMIN_PASSWORD.length >= 12;
 
 const safeEqual = (left, right) => {
   if (typeof left !== "string" || typeof right !== "string") return false;
@@ -160,19 +166,29 @@ const requireUser = (request) => {
   return current.user;
 };
 
+const requireAdmin = (request) => {
+  const current = getSession(request);
+  if (!current) throw new HttpError(401, "Please sign in to continue.", "AUTH_REQUIRED");
+  if (!adminCredentialsReady() || current.session.isAdmin !== true || current.user.email !== configuredAdminEmail()) {
+    throw new HttpError(403, "Administrator access is required.", "ADMIN_REQUIRED");
+  }
+  return current.user;
+};
+
 const sessionCookie = (token, maxAge) => {
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   const expiry = maxAge ? `; Max-Age=${maxAge}` : "";
   return `rmr_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${expiry}${secure}`;
 };
 
-const createSession = async (response, user, remember) => {
+const createSession = async (response, user, remember, isAdmin = false) => {
   const maxAge = remember ? 30 * 24 * 60 * 60 : 12 * 60 * 60;
   const token = crypto.randomBytes(32).toString("base64url");
   store.sessions = store.sessions.filter((session) => session.expiresAt > Date.now());
   store.sessions.push({
     tokenHash: tokenHash(token),
     userId: user.id,
+    isAdmin,
     expiresAt: Date.now() + maxAge * 1000,
   });
   await saveStore();
@@ -180,6 +196,21 @@ const createSession = async (response, user, remember) => {
 };
 
 const paymentCredentialsReady = () => Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+const demoPaymentsEnabled = () => process.env.NODE_ENV !== "production" && process.env.DEMO_PAYMENTS === "true";
+
+const quoteRental = (body) => {
+  const car = store.cars.find((item) => item.id === body.carId);
+  const startDate = parseDate(body.startDate);
+  const returnDate = parseDate(body.returnDate);
+  if (!car || !startDate || !returnDate) throw new HttpError(400, "Choose a car and valid rental dates.");
+  const days = Math.ceil((returnDate.getTime() - startDate.getTime()) / 86400000);
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  if (startDate < today || days < 1 || days > 90) {
+    throw new HttpError(400, "Pick-up must be today or later, and rentals can be 1 to 90 days.");
+  }
+  return { car, days, total: car.dailyRate * days };
+};
 
 const razorpayRequest = async (endpoint, options = {}) => {
   const credentials = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
@@ -218,18 +249,7 @@ const createPaymentOrder = async (request, response) => {
     throw new HttpError(503, "Online payments are not configured. Add Razorpay keys to the .env file.", "PAYMENTS_NOT_CONFIGURED");
   }
   const body = await readJson(request);
-  const car = catalog[body.carId];
-  const startDate = parseDate(body.startDate);
-  const returnDate = parseDate(body.returnDate);
-  if (!car || !startDate || !returnDate) throw new HttpError(400, "Choose a car and valid rental dates.");
-  const days = Math.ceil((returnDate.getTime() - startDate.getTime()) / 86400000);
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  if (startDate < today || days < 1 || days > 90) {
-    throw new HttpError(400, "Pick-up must be today or later, and rentals can be 1 to 90 days.");
-  }
-
-  const total = car.dailyRate * days;
+  const { car, days, total } = quoteRental(body);
   const bookingId = crypto.randomUUID();
   const receipt = `rr_${crypto.randomUUID().replaceAll("-", "").slice(0, 32)}`;
   const order = await razorpayRequest("/orders", {
@@ -268,6 +288,43 @@ const createPaymentOrder = async (request, response) => {
     amount: order.amount,
     currency: order.currency,
     keyId: process.env.RAZORPAY_KEY_ID,
+    carName: car.name,
+    days,
+  });
+};
+
+const createDemoPayment = async (request, response) => {
+  if (!demoPaymentsEnabled()) {
+    throw new HttpError(404, "Demo payments are not available.", "DEMO_PAYMENTS_DISABLED");
+  }
+  const user = requireUser(request);
+  const body = await readJson(request);
+  const { car, days, total } = quoteRental(body);
+  const now = new Date().toISOString();
+  const booking = {
+    id: crypto.randomUUID(),
+    userId: user.id,
+    carId: body.carId,
+    carName: car.name,
+    dailyRate: car.dailyRate,
+    days,
+    startDate: body.startDate,
+    returnDate: body.returnDate,
+    total,
+    currency: "INR",
+    orderId: null,
+    paymentId: null,
+    paymentMode: "demo",
+    status: "demo_paid",
+    createdAt: now,
+  };
+  store.bookings.push(booking);
+  await saveStore();
+  sendJson(response, 201, {
+    bookingId: booking.id,
+    status: booking.status,
+    total,
+    currency: booking.currency,
     carName: car.name,
     days,
   });
@@ -373,10 +430,120 @@ const enforceAuthRateLimit = (request) => {
   if (current.count > 20) throw new HttpError(429, "Too many attempts. Please try again in 15 minutes.", "RATE_LIMITED");
 };
 
+const supportRateLimits = new Map();
+const enforceSupportRateLimit = (request) => {
+  const address = request.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const current = supportRateLimits.get(address) || { count: 0, resetAt: now + 60 * 60 * 1000 };
+  if (current.resetAt <= now) {
+    current.count = 0;
+    current.resetAt = now + 60 * 60 * 1000;
+  }
+  current.count += 1;
+  supportRateLimits.set(address, current);
+  if (supportRateLimits.size > 10000) supportRateLimits.clear();
+  if (current.count > 5) throw new HttpError(429, "Too many support requests. Please try again later.", "RATE_LIMITED");
+};
+
+const validateCar = async (body) => {
+  const category = typeof body.category === "string" ? body.category.trim() : "";
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const transmission = typeof body.transmission === "string" ? body.transmission.trim() : "";
+  const dailyRate = Number(body.dailyRate);
+  const image = typeof body.image === "string" ? body.image.trim() : "";
+  if (!category || category.length > 40 || !name || name.length > 60 || !transmission || transmission.length > 30
+      || !Number.isSafeInteger(dailyRate) || dailyRate < 1 || dailyRate > 1000000
+      || !/^assets\/images\/[a-zA-Z0-9_-]+\.(?:png|jpe?g)$/i.test(image)) {
+    throw new HttpError(400, "Enter a valid category, car name, transmission, daily rate, and local image path.", "INVALID_CAR");
+  }
+  try {
+    await fs.access(path.join(root, image));
+  } catch {
+    throw new HttpError(400, "The selected car image was not found in assets/images.", "INVALID_CAR_IMAGE");
+  }
+  return { category, name, transmission, dailyRate, image };
+};
+
+const handleCars = async (request, response, pathname) => {
+  if (pathname === "/api/cars" && request.method === "GET") {
+    sendJson(response, 200, { cars: store.cars });
+    return;
+  }
+  if (pathname === "/api/support" && request.method === "POST") {
+    enforceSupportRateLimit(request);
+    const body = await readJson(request);
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const subject = typeof body.subject === "string" ? body.subject.trim() : "";
+    const message = typeof body.message === "string" ? body.message.trim() : "";
+    if (!name || name.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254
+        || !subject || subject.length > 120 || !message || message.length > 4000) {
+      throw new HttpError(400, "Enter your name, a valid email, subject, and message.", "INVALID_SUPPORT_REQUEST");
+    }
+    const ticket = {
+      id: crypto.randomUUID(), name, email, subject, message,
+      status: "open", createdAt: new Date().toISOString(),
+    };
+    store.supportTickets.push(ticket);
+    await saveStore();
+    sendJson(response, 201, { received: true, ticketId: ticket.id });
+    return;
+  }
+  if (pathname === "/api/admin/cars" && request.method === "POST") {
+    requireAdmin(request);
+    const body = await readJson(request);
+    const car = { id: crypto.randomUUID(), ...await validateCar(body) };
+    store.cars.push(car);
+    await saveStore();
+    sendJson(response, 201, { car });
+    return;
+  }
+  const carMatch = pathname.match(/^\/api\/admin\/cars\/([a-f0-9-]+)$/i);
+  if (carMatch && ["PUT", "DELETE"].includes(request.method)) {
+    requireAdmin(request);
+    const index = store.cars.findIndex((car) => car.id === carMatch[1]);
+    if (index < 0) throw new HttpError(404, "Car not found.", "CAR_NOT_FOUND");
+    if (request.method === "DELETE") {
+      store.cars.splice(index, 1);
+      await saveStore();
+      sendJson(response, 200, { deleted: true });
+      return;
+    }
+    store.cars[index] = { id: carMatch[1], ...await validateCar(await readJson(request)) };
+    await saveStore();
+    sendJson(response, 200, { car: store.cars[index] });
+    return;
+  }
+  if (pathname === "/api/admin/support" && request.method === "GET") {
+    requireAdmin(request);
+    const tickets = [...store.supportTickets].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    sendJson(response, 200, { tickets });
+    return;
+  }
+  const ticketMatch = pathname.match(/^\/api\/admin\/support\/([a-f0-9-]+)$/i);
+  if (ticketMatch && request.method === "PATCH") {
+    requireAdmin(request);
+    const ticket = store.supportTickets.find((item) => item.id === ticketMatch[1]);
+    if (!ticket) throw new HttpError(404, "Support message not found.", "TICKET_NOT_FOUND");
+    const { status } = await readJson(request);
+    if (!["open", "in-progress", "resolved"].includes(status)) {
+      throw new HttpError(400, "Choose a valid support status.", "INVALID_TICKET_STATUS");
+    }
+    ticket.status = status;
+    await saveStore();
+    sendJson(response, 200, { ticket });
+    return;
+  }
+  if (pathname.startsWith("/api/admin/")) requireAdmin(request);
+  throw new HttpError(404, "Endpoint not found.", "NOT_FOUND");
+};
+
 const handleAuth = async (request, response, pathname) => {
   if (pathname === "/api/auth/me" && request.method === "GET") {
     const current = getSession(request);
-    sendJson(response, 200, { user: current ? publicUser(current.user) : null });
+    const isAdmin = Boolean(current && adminCredentialsReady() && current.session.isAdmin === true
+      && current.user.email === configuredAdminEmail());
+    sendJson(response, 200, { user: current ? publicUser(current.user, isAdmin) : null });
     return;
   }
 
@@ -404,9 +571,13 @@ const handleAuth = async (request, response, pathname) => {
     }
 
     let user;
+    let isAdmin = false;
     if (pathname.endsWith("/register")) {
       const name = typeof body.name === "string" ? body.name.trim() : "";
       if (!name || name.length > 80) throw new HttpError(400, "Enter your name.", "INVALID_NAME");
+      if (adminCredentialsReady() && email === configuredAdminEmail()) {
+        throw new HttpError(409, "This email is reserved for administrator login.", "ADMIN_EMAIL_RESERVED");
+      }
       if (store.users.some((item) => item.email === email) || pendingRegistrationEmails.has(email)) {
         throw new HttpError(409, "An account with this email already exists. Login instead.", "EMAIL_IN_USE");
       }
@@ -420,16 +591,30 @@ const handleAuth = async (request, response, pathname) => {
         pendingRegistrationEmails.delete(email);
       }
     } else {
-      user = store.users.find((item) => item.email === email);
-      const salt = user?.salt || dummySalt;
-      const expected = user?.passwordHash || dummyPasswordHash;
-      const candidate = (await scrypt(password, salt, 64)).toString("hex");
-      if (!user || !safeEqual(candidate, expected)) {
-        throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
+      if (adminCredentialsReady() && email === configuredAdminEmail()) {
+        const candidate = crypto.createHash("sha256").update(password).digest("hex");
+        const expected = crypto.createHash("sha256").update(process.env.ADMIN_PASSWORD).digest("hex");
+        if (!safeEqual(candidate, expected)) {
+          throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
+        }
+        user = store.users.find((item) => item.email === email);
+        if (!user) {
+          user = { id: crypto.randomUUID(), name: "Administrator", email, salt: "", passwordHash: "", createdAt: new Date().toISOString() };
+          store.users.push(user);
+        }
+        isAdmin = true;
+      } else {
+        user = store.users.find((item) => item.email === email);
+        const salt = user?.salt || dummySalt;
+        const expected = user?.passwordHash || dummyPasswordHash;
+        const candidate = (await scrypt(password, salt, 64)).toString("hex");
+        if (!user || !safeEqual(candidate, expected)) {
+          throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
+        }
       }
     }
-    const headers = await createSession(response, user, body.remember === true);
-    sendJson(response, pathname.endsWith("/register") ? 201 : 200, { user: publicUser(user) }, headers);
+    const headers = await createSession(response, user, body.remember === true, isAdmin);
+    sendJson(response, pathname.endsWith("/register") ? 201 : 200, { user: publicUser(user, isAdmin) }, headers);
     return;
   }
 
@@ -472,8 +657,14 @@ const handleRequest = async (request, response) => {
     if (pathname === "/api/config" && request.method === "GET") {
       sendJson(response, 200, {
         enabled: paymentCredentialsReady(),
+        demoEnabled: demoPaymentsEnabled(),
         keyId: paymentCredentialsReady() ? process.env.RAZORPAY_KEY_ID : "",
+        adminEnabled: adminCredentialsReady(),
       });
+      return;
+    }
+    if (["/api/cars", "/api/support"].includes(pathname) || pathname.startsWith("/api/admin/")) {
+      await handleCars(request, response, pathname);
       return;
     }
     if (pathname.startsWith("/api/auth/")) {
@@ -483,16 +674,20 @@ const handleRequest = async (request, response) => {
     if (pathname === "/api/bookings" && request.method === "GET") {
       const user = requireUser(request);
       const bookings = store.bookings
-        .filter((booking) => booking.userId === user.id && ["paid", "awaiting_capture"].includes(booking.status))
+        .filter((booking) => booking.userId === user.id && ["paid", "awaiting_capture", "demo_paid"].includes(booking.status))
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        .map(({ id, carName, startDate, returnDate, days, total, status, createdAt }) => ({
-          id, carName, startDate, returnDate, days, total, status, createdAt,
+        .map(({ id, carName, startDate, returnDate, days, total, status, paymentMode, createdAt }) => ({
+          id, carName, startDate, returnDate, days, total, status, paymentMode, createdAt,
         }));
       sendJson(response, 200, { bookings });
       return;
     }
     if (pathname === "/api/payments/order" && request.method === "POST") {
       await createPaymentOrder(request, response);
+      return;
+    }
+    if (pathname === "/api/payments/demo" && request.method === "POST") {
+      await createDemoPayment(request, response);
       return;
     }
     if (pathname === "/api/payments/verify" && request.method === "POST") {

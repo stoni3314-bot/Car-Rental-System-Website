@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rent My Ride | Car Rental Website</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=3">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 
@@ -18,6 +18,7 @@
                 <a href="#home" class="nav-link">Home</a>
                 <a href="#trending" class="nav-link">Trending</a>
                 <a href="#cars" class="nav-link">Cars</a>
+                <a href="#support" class="nav-link">Customer Service</a>
                 <a href="#team" class="nav-link">Team</a>
                 <a href="#reviews" class="nav-link">Reviews</a>
             </div>
@@ -113,119 +114,8 @@
                 <p>Ride in style, pay less. Travel smart and rent with us.</p>
             </div>
 
-            <div class="rentals-content">
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Mini SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-1.png" alt="Punch">
-                    <h2>Punch</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 2999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-1">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Mini SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-2.png" alt="Nexon">
-                    <h2>Nexon</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 6999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-2">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-3.png" alt="Harrier">
-                    <h2>Harrier</h2>
-                    <h4>Manual</h4>
-                    <div class="price-btn">
-                        <p>Rs. 4999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-3">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Sedan</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-4.png" alt="Altroz">
-                    <h2>Altroz</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 7999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-4">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Sedan</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-5.png" alt="Tigor">
-                    <h2>Tigor</h2>
-                    <h4>Manual</h4>
-                    <div class="price-btn">
-                        <p>Rs. 1399 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-5">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Mini SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-6.png" alt="Punch">
-                    <h2>Punch</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 5999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-6">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>Mini SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-7.png" alt="Punch">
-                    <h2>Punch</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 1999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-7">Rent</a>
-                    </div>
-                </article>
-
-                <article class="rental-box">
-                    <div class="rental-top">
-                        <h3>SUV</h3>
-                        <i class="ri-heart-3-line"></i>
-                    </div>
-                    <img src="assets/images/rental-8.png" alt="GTS40">
-                    <h2>GTS40</h2>
-                    <h4>Automatic</h4>
-                    <div class="price-btn">
-                        <p>Rs. 11999 <span>/day</span></p>
-                        <a href="#" class="rental-btn" data-car-id="rental-8">Rent</a>
-                    </div>
-                </article>
-            </div>
+            <p class="car-list-status" id="car-list-status" role="status" aria-live="polite"></p>
+            <div class="rentals-content" id="rentals-content"></div>
         </section>
 
         <section class="team container" id="team">
@@ -331,6 +221,21 @@
                 <button type="submit" class="s-btn">Subscribe</button>
             </form>
         </section>
+
+        <section class="support container" id="support">
+            <div class="heading center">
+                <h2>Customer Service</h2>
+                <p>Send us a message and our team will get back to you.</p>
+            </div>
+            <form class="support-form" id="support-form">
+                <label><span>Your name</span><input type="text" name="name" maxlength="80" autocomplete="name" required></label>
+                <label><span>Email</span><input type="email" name="email" maxlength="254" autocomplete="email" required></label>
+                <label class="support-subject"><span>Subject</span><input type="text" name="subject" maxlength="120" required></label>
+                <label class="support-message-field"><span>Message</span><textarea name="message" rows="5" maxlength="4000" required></textarea></label>
+                <button type="submit" class="support-submit"><i class="ri-send-plane-line" aria-hidden="true"></i> Send message</button>
+                <p class="support-status" id="support-status" role="status" aria-live="polite"></p>
+            </form>
+        </section>
     </main>
 
     <footer class="footer">
@@ -400,6 +305,22 @@
                 <h2 id="profile-email"></h2>
                 <h3 class="booking-history-title">Your bookings</h3>
                 <div class="booking-history" id="booking-history" aria-live="polite"></div>
+                <section class="admin-tools" id="admin-tools" hidden>
+                    <h3>Fleet management</h3>
+                    <form class="admin-car-form" id="admin-car-form">
+                        <input type="hidden" name="id">
+                        <label><span>Car name</span><input type="text" name="name" maxlength="60" required></label>
+                        <label><span>Category</span><input type="text" name="category" maxlength="40" placeholder="SUV, Sedan, EV" required></label>
+                        <label><span>Transmission</span><input type="text" name="transmission" maxlength="30" placeholder="Automatic or Manual" required></label>
+                        <label><span>Rate per day (Rs.)</span><input type="number" name="dailyRate" min="1" max="1000000" step="1" required></label>
+                        <label class="admin-image-field"><span>Local image path</span><input type="text" name="image" value="assets/images/rental-1.png" pattern="assets/images/[A-Za-z0-9_-]+\.(png|jpg|jpeg)" required></label>
+                        <div class="admin-form-actions"><button type="submit" class="login-submit" id="admin-car-submit">Add car</button><button type="button" class="admin-cancel" id="admin-car-cancel" hidden>Cancel edit</button></div>
+                        <p class="login-message" id="admin-car-status" role="status" aria-live="polite"></p>
+                    </form>
+                    <div class="admin-car-list" id="admin-car-list"></div>
+                    <h3 class="admin-support-title">Customer messages</h3>
+                    <div class="admin-ticket-list" id="admin-ticket-list" aria-live="polite"></div>
+                </section>
                 <p class="login-message" id="profile-message" role="status" aria-live="polite"></p>
                 <button type="button" class="logout-button" id="logout-button">
                     <i class="ri-logout-box-r-line" aria-hidden="true"></i> Log out
@@ -431,14 +352,15 @@
                     <strong id="booking-estimate">Rs. 0</strong>
                 </div>
                 <button type="submit" class="login-submit" id="payment-submit">
-                    <i class="ri-lock-line" aria-hidden="true"></i> Continue to secure payment
+                    <i class="ri-lock-line" aria-hidden="true"></i>
+                    <span id="payment-button-label">Continue to secure payment</span>
                 </button>
                 <p class="login-message" id="payment-message" role="status" aria-live="polite"></p>
             </form>
         </section>
     </div>
 
-    <script src="assets/js/script.js"></script>
+    <script src="assets/js/script.js?v=3"></script>
 </body>
 
 </html>

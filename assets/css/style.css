@@ -458,6 +458,13 @@ section {
     background: var(--main-color);
 }
 
+.car-list-status {
+    min-height: 1.5rem;
+    margin-bottom: 0.8rem;
+    color: var(--text-alter-color);
+    text-align: center;
+}
+
 .team-box img {
     height: 420px;
     border-radius: 8px;
@@ -505,6 +512,89 @@ section {
 
 .newsletter {
     text-align: center;
+}
+
+.support {
+    padding-top: 2rem;
+}
+
+.support-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    max-width: 760px;
+    margin: 1.8rem auto 0;
+}
+
+.support-form label,
+.admin-car-form label {
+    display: grid;
+    gap: 0.4rem;
+    color: var(--text-color);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.support-form input,
+.support-form textarea,
+.admin-car-form input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem 0.8rem;
+    color: var(--text-color);
+    background: var(--surface-color);
+    border: 1px solid #d9e0ea;
+    border-radius: 6px;
+    outline: 0;
+}
+
+.support-form textarea {
+    resize: vertical;
+}
+
+.support-form input:focus,
+.support-form textarea:focus,
+.admin-car-form input:focus {
+    border-color: var(--main-color);
+}
+
+.support-subject,
+.support-message-field,
+.support-submit,
+.support-status {
+    grid-column: 1 / -1;
+}
+
+.support-submit,
+.admin-action-button,
+.admin-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 42px;
+    padding: 0 16px;
+    color: var(--bg-color);
+    background: var(--main-color);
+    border-radius: 6px;
+    font-weight: 700;
+}
+
+.support-submit {
+    justify-self: start;
+}
+
+.support-submit:hover,
+.admin-action-button:hover,
+.admin-cancel:hover {
+    background: var(--second-color);
+}
+
+.support-status {
+    min-height: 1.4rem;
+    color: var(--main-color);
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 .newsletter form {
@@ -808,6 +898,108 @@ section {
     font-size: 0.78rem;
 }
 
+.admin-tools {
+    margin-top: 1.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid #d9e0ea;
+}
+
+.admin-tools > h3 {
+    margin: 0 0 0.8rem;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.admin-car-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.admin-car-form label {
+    font-size: 0.8rem;
+}
+
+.admin-image-field,
+.admin-form-actions,
+.admin-car-form .login-message {
+    grid-column: 1 / -1;
+}
+
+.admin-form-actions {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.admin-car-form .login-submit,
+.admin-cancel {
+    width: auto;
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 0.82rem;
+}
+
+.admin-cancel {
+    color: var(--text-color);
+    background: var(--container-color);
+}
+
+.admin-car-row,
+.admin-ticket-row {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.8rem 0;
+    border-top: 1px solid #d9e0ea;
+    font-size: 0.82rem;
+}
+
+.admin-car-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+}
+
+.admin-car-row span,
+.admin-ticket-row span {
+    color: var(--text-alter-color);
+}
+
+.admin-action-button {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+}
+
+.admin-action-button.danger {
+    background: #a84237;
+}
+
+.admin-action-button.danger:hover {
+    background: #7f2f28;
+}
+
+.admin-support-title {
+    margin-top: 1.3rem !important;
+}
+
+.admin-ticket-row strong {
+    overflow-wrap: anywhere;
+}
+
+.admin-ticket-row p {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.admin-ticket-row select {
+    width: max-content;
+    min-height: 34px;
+    padding: 0 8px;
+    color: var(--text-color);
+    background: var(--surface-color);
+    border: 1px solid #d9e0ea;
+    border-radius: 5px;
+}
+
 .logout-button {
     display: inline-flex;
     align-items: center;
@@ -944,6 +1136,33 @@ section {
     .newsletter form {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .support-form,
+    .admin-car-form {
+        grid-template-columns: 1fr;
+    }
+
+    .support-subject,
+    .support-message-field,
+    .support-submit,
+    .support-status,
+    .admin-image-field,
+    .admin-form-actions,
+    .admin-car-form .login-message {
+        grid-column: auto;
+    }
+
+    .support-submit {
+        width: 100%;
+    }
+
+    .admin-car-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .admin-car-row span {
+        grid-column: 1 / -1;
     }
 
     .s-btn {

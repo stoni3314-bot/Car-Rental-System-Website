@@ -7,6 +7,8 @@ const loginMessage = document.querySelector("#login-message");
 const bookingForm = document.querySelector("#booking-form");
 const paymentMessage = document.querySelector("#payment-message");
 const paymentButton = document.querySelector("#payment-submit");
+const paymentButtonIcon = paymentButton.querySelector("i");
+const paymentButtonLabel = document.querySelector("#payment-button-label");
 const nameField = document.querySelector("#name-field");
 const nameInput = nameField.querySelector("input");
 const emailInput = loginForm.querySelector('input[name="email"]');
@@ -18,7 +20,8 @@ let currentUser = null;
 let authMode = "login";
 let pendingCar = null;
 let selectedCar = null;
-let paymentConfig = { enabled: false, keyId: "" };
+let carCatalog = [];
+let paymentConfig = { enabled: false, demoEnabled: false, keyId: "" };
 let previousFocus = null;
 
 const api = async (path, options = {}) => {
@@ -127,7 +130,9 @@ const loadBookings = async () => {
       dates.textContent = `${booking.startDate} to ${booking.returnDate}`;
       const status = document.createElement("span");
       status.className = "booking-status";
-      status.textContent = booking.status === "paid" ? "Paid" : "Payment pending capture";
+      status.textContent = booking.status === "demo_paid"
+        ? "Demo only: no real payment or rental"
+        : booking.status === "paid" ? "Paid" : "Payment pending capture";
       const total = document.createElement("strong");
       total.textContent = `Rs. ${Number(booking.total).toLocaleString("en-IN")}`;
       row.append(title, dates, status, total);
@@ -138,12 +143,134 @@ const loadBookings = async () => {
   }
 };
 
+const loadCars = async () => {
+  const grid = document.querySelector("#rentals-content");
+  const status = document.querySelector("#car-list-status");
+  grid.replaceChildren();
+  try {
+    const { cars } = await api("/api/cars");
+    carCatalog = cars;
+    status.textContent = cars.length ? "" : "No cars are currently listed.";
+    cars.forEach((car) => {
+      const card = document.createElement("article");
+      card.className = "rental-box";
+      const top = document.createElement("div");
+      top.className = "rental-top";
+      const category = document.createElement("h3");
+      category.textContent = car.category;
+      const icon = document.createElement("i");
+      icon.className = "ri-car-line";
+      icon.setAttribute("aria-hidden", "true");
+      top.append(category, icon);
+
+      const image = document.createElement("img");
+      image.src = car.image;
+      image.alt = car.name;
+      image.loading = "lazy";
+      const name = document.createElement("h2");
+      name.textContent = car.name;
+      const transmission = document.createElement("h4");
+      transmission.textContent = car.transmission;
+      const priceButton = document.createElement("div");
+      priceButton.className = "price-btn";
+      const price = document.createElement("p");
+      price.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} `;
+      const perDay = document.createElement("span");
+      perDay.textContent = "/day";
+      price.append(perDay);
+      const rent = document.createElement("button");
+      rent.type = "button";
+      rent.className = "rental-btn";
+      rent.dataset.carId = car.id;
+      rent.textContent = "Rent";
+      priceButton.append(price, rent);
+      card.append(top, image, name, transmission, priceButton);
+      grid.append(card);
+    });
+  } catch {
+    status.textContent = "Car list could not be loaded. Please refresh the page.";
+  }
+};
+
+const resetAdminCarForm = () => {
+  const form = document.querySelector("#admin-car-form");
+  form.reset();
+  form.elements.id.value = "";
+  document.querySelector("#admin-car-submit").textContent = "Add car";
+  document.querySelector("#admin-car-cancel").hidden = true;
+  document.querySelector("#admin-car-status").textContent = "";
+};
+
+const loadAdminCars = async () => {
+  const list = document.querySelector("#admin-car-list");
+  list.replaceChildren();
+  carCatalog.forEach((car) => {
+    const row = document.createElement("div");
+    row.className = "admin-car-row";
+    const label = document.createElement("strong");
+    label.textContent = `${car.name} (${car.category})`;
+    const rate = document.createElement("span");
+    rate.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} / day`;
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "admin-action-button";
+    edit.dataset.editCar = car.id;
+    edit.textContent = "Edit";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "admin-action-button danger";
+    remove.dataset.deleteCar = car.id;
+    remove.textContent = "Delete";
+    row.append(label, rate, edit, remove);
+    list.append(row);
+  });
+};
+
+const loadAdminTickets = async () => {
+  const list = document.querySelector("#admin-ticket-list");
+  list.replaceChildren();
+  try {
+    const { tickets } = await api("/api/admin/support");
+    if (!tickets.length) {
+      list.textContent = "No customer messages yet.";
+      return;
+    }
+    tickets.forEach((ticket) => {
+      const row = document.createElement("article");
+      row.className = "admin-ticket-row";
+      const subject = document.createElement("strong");
+      subject.textContent = ticket.subject;
+      const contact = document.createElement("span");
+      contact.textContent = `${ticket.name} | ${ticket.email} | ${new Date(ticket.createdAt).toLocaleString()}`;
+      const message = document.createElement("p");
+      message.textContent = ticket.message;
+      const status = document.createElement("select");
+      status.setAttribute("aria-label", `Status for ${ticket.subject}`);
+      status.dataset.ticketId = ticket.id;
+      ["open", "in-progress", "resolved"].forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value.replace("-", " ");
+        option.selected = value === ticket.status;
+        status.append(option);
+      });
+      row.append(subject, contact, message, status);
+      list.append(row);
+    });
+  } catch (error) {
+    list.textContent = error.message;
+  }
+};
+
 const openProfile = async () => {
   document.querySelector("#auth-view").hidden = true;
   document.querySelector("#profile-view").hidden = false;
   document.querySelector("#profile-email").textContent = currentUser.email;
   document.querySelector("#profile-message").textContent = "";
+  const adminTools = document.querySelector("#admin-tools");
+  adminTools.hidden = !currentUser.isAdmin;
   await loadBookings();
+  if (currentUser.isAdmin) await Promise.all([loadAdminCars(), loadAdminTickets()]);
   showModal(loginModal, document.querySelector("#logout-button"));
 };
 
@@ -179,7 +306,7 @@ const updateBookingEstimate = () => {
   }
   document.querySelector("#booking-days").textContent = `${days} ${days === 1 ? "day" : "days"}`;
   document.querySelector("#booking-estimate").textContent = `Rs. ${(selectedCar.dailyRate * days).toLocaleString("en-IN")}`;
-  paymentButton.disabled = !paymentConfig.enabled;
+  paymentButton.disabled = !(paymentConfig.enabled || paymentConfig.demoEnabled);
 };
 
 const openBooking = (car) => {
@@ -197,21 +324,13 @@ const openBooking = (car) => {
   bookingStart.min = getLocalDate();
   bookingStart.value = searchStart < bookingStart.min ? bookingStart.min : searchStart;
   bookingReturn.value = searchReturn > bookingStart.value ? searchReturn : addDays(bookingStart.value, 1);
-  paymentMessage.textContent = paymentConfig.enabled
-    ? ""
-    : "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
+  paymentMessage.textContent = paymentConfig.demoEnabled
+    ? "Demo payment only: no money will be charged and no real rental is reserved."
+    : paymentConfig.enabled
+      ? ""
+      : "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
   updateBookingEstimate();
   showModal(bookingModal, bookingStart);
-};
-
-const readCarFromCard = (trigger) => {
-  const card = trigger.closest(".rental-box");
-  const price = card.querySelector(".price-btn p").textContent.match(/[\d,]+/);
-  return {
-    id: trigger.dataset.carId,
-    name: card.querySelector(".rental-box h2").textContent.trim(),
-    dailyRate: Number(price?.[0].replaceAll(",", "") || 0),
-  };
 };
 
 const loadRazorpay = () => new Promise((resolve, reject) => {
@@ -229,7 +348,7 @@ const loadRazorpay = () => new Promise((resolve, reject) => {
 const beginPayment = async (event) => {
   event.preventDefault();
   paymentMessage.textContent = "";
-  if (!paymentConfig.enabled) {
+  if (!paymentConfig.enabled && !paymentConfig.demoEnabled) {
     paymentMessage.textContent = "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
     return;
   }
@@ -242,6 +361,23 @@ const beginPayment = async (event) => {
   paymentButton.classList.add("is-loading");
 
   try {
+    if (paymentConfig.demoEnabled) {
+      const result = await api("/api/payments/demo", {
+        method: "POST",
+        body: JSON.stringify({
+          carId: selectedCar.id,
+          startDate: bookingStart.value,
+          returnDate: bookingReturn.value,
+        }),
+      });
+      paymentMessage.textContent = result.status === "demo_paid"
+        ? "Demo complete. No money was charged and no real rental is reserved."
+        : "Demo payment could not be completed.";
+      await loadBookings();
+      window.setTimeout(() => hideModal(bookingModal), 2200);
+      return;
+    }
+
     await loadRazorpay();
     const order = await api("/api/payments/order", {
       method: "POST",
@@ -277,7 +413,7 @@ const beginPayment = async (event) => {
           window.setTimeout(() => hideModal(bookingModal), 1800);
         } catch (error) {
           paymentMessage.textContent = error.message;
-          paymentButton.disabled = !paymentConfig.enabled;
+          paymentButton.disabled = !(paymentConfig.enabled || paymentConfig.demoEnabled);
           paymentButton.classList.remove("is-loading");
         }
       },
@@ -313,14 +449,14 @@ if (menuIcon && navbar) {
 }
 
 document.querySelector(".user-trigger").addEventListener("click", () => openLogin());
-document.querySelectorAll(".rental-btn").forEach((trigger) => {
-  trigger.addEventListener("click", (event) => {
-    event.preventDefault();
-    closeMenu();
-    const car = readCarFromCard(trigger);
-    if (currentUser) openBooking(car);
-    else openLogin(car);
-  });
+document.querySelector("#rentals-content").addEventListener("click", (event) => {
+  const trigger = event.target.closest(".rental-btn");
+  if (!trigger) return;
+  closeMenu();
+  const car = carCatalog.find((item) => item.id === trigger.dataset.carId);
+  if (!car) return;
+  if (currentUser) openBooking(car);
+  else openLogin(car);
 });
 
 document.querySelectorAll("[data-close-login]").forEach((button) => button.addEventListener("click", () => hideModal(loginModal)));
@@ -380,6 +516,109 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
   }
 });
 
+document.querySelector("#support-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector("button[type='submit']");
+  const status = document.querySelector("#support-status");
+  submit.disabled = true;
+  status.textContent = "";
+  const values = new FormData(form);
+  try {
+    await api("/api/support", {
+      method: "POST",
+      body: JSON.stringify({
+        name: values.get("name"),
+        email: values.get("email"),
+        subject: values.get("subject"),
+        message: values.get("message"),
+      }),
+    });
+    form.reset();
+    status.textContent = "Message sent. Our customer-service team will get back to you.";
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+document.querySelector("#admin-car-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = new FormData(form);
+  const id = values.get("id");
+  const button = document.querySelector("#admin-car-submit");
+  const status = document.querySelector("#admin-car-status");
+  button.disabled = true;
+  status.textContent = "";
+  try {
+    await api(id ? `/api/admin/cars/${encodeURIComponent(id)}` : "/api/admin/cars", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify({
+        name: values.get("name"),
+        category: values.get("category"),
+        transmission: values.get("transmission"),
+        dailyRate: Number(values.get("dailyRate")),
+        image: values.get("image"),
+      }),
+    });
+    resetAdminCarForm();
+    await loadCars();
+    await loadAdminCars();
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#admin-car-cancel").addEventListener("click", resetAdminCarForm);
+document.querySelector("#admin-car-list").addEventListener("click", async (event) => {
+  const edit = event.target.closest("[data-edit-car]");
+  const remove = event.target.closest("[data-delete-car]");
+  const form = document.querySelector("#admin-car-form");
+  const status = document.querySelector("#admin-car-status");
+  if (edit) {
+    const car = carCatalog.find((item) => item.id === edit.dataset.editCar);
+    if (!car) return;
+    form.elements.id.value = car.id;
+    form.elements.name.value = car.name;
+    form.elements.category.value = car.category;
+    form.elements.transmission.value = car.transmission;
+    form.elements.dailyRate.value = car.dailyRate;
+    form.elements.image.value = car.image;
+    document.querySelector("#admin-car-submit").textContent = "Save changes";
+    document.querySelector("#admin-car-cancel").hidden = false;
+    status.textContent = "";
+    form.elements.name.focus();
+  } else if (remove && window.confirm("Remove this car from the public list?")) {
+    status.textContent = "";
+    try {
+      await api(`/api/admin/cars/${encodeURIComponent(remove.dataset.deleteCar)}`, { method: "DELETE" });
+      resetAdminCarForm();
+      await loadCars();
+      await loadAdminCars();
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  }
+});
+
+document.querySelector("#admin-ticket-list").addEventListener("change", async (event) => {
+  const select = event.target.closest("select[data-ticket-id]");
+  if (!select) return;
+  try {
+    await api(`/api/admin/support/${encodeURIComponent(select.dataset.ticketId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: select.value }),
+    });
+  } catch (error) {
+    document.querySelector("#profile-message").textContent = error.message;
+    await loadAdminTickets();
+  }
+});
+
 bookingStart.addEventListener("change", () => {
   if (bookingReturn.value <= bookingStart.value) bookingReturn.value = addDays(bookingStart.value, 1);
   updateBookingEstimate();
@@ -415,7 +654,14 @@ startInput.addEventListener("change", () => {
 api("/api/config")
   .then((config) => {
     paymentConfig = config;
-    if (selectedCar && bookingModal.classList.contains("show")) updateBookingEstimate();
+    paymentButtonIcon.className = config.demoEnabled ? "ri-flask-line" : "ri-lock-line";
+    paymentButtonLabel.textContent = config.demoEnabled ? "Simulate demo payment" : "Continue to secure payment";
+    if (selectedCar && bookingModal.classList.contains("show")) {
+      updateBookingEstimate();
+      paymentMessage.textContent = config.demoEnabled
+        ? "Demo payment only: no money will be charged and no real rental is reserved."
+        : config.enabled ? "" : "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
+    }
   })
   .catch(() => {});
 
@@ -424,3 +670,5 @@ api("/api/auth/me")
     if (user) setUser(user);
   })
   .catch(() => setUser(null));
+
+loadCars();
