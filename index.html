@@ -114,6 +114,7 @@
                 <p>Ride in style, pay less. Travel smart and rent with us.</p>
             </div>
 
+            <p class="preview-note" id="preview-rental-note" hidden>Sample vehicles for viewing only. Booking and payment are unavailable in this public preview.</p>
             <p class="car-list-status" id="car-list-status" role="status" aria-live="polite"></p>
             <div class="rentals-content" id="rentals-content"></div>
         </section>
@@ -216,7 +217,8 @@
         <section class="newsletter container" id="newsletter">
             <h2>Subscribe and Get 20% Discount</h2>
             <p>Get rental offers, new fleet updates, and travel deals in your inbox.</p>
-            <form action="#">
+            <p class="preview-note" id="preview-newsletter-note" hidden>Newsletter sign-up is unavailable in this public preview.</p>
+            <form action="#" id="newsletter-form">
                 <input type="email" name="email" class="email" placeholder="Email address" required>
                 <button type="submit" class="s-btn">Subscribe</button>
             </form>
@@ -227,6 +229,7 @@
                 <h2>Customer Service</h2>
                 <p>Send us a message and our team will get back to you.</p>
             </div>
+            <p class="preview-note" id="preview-support-note" hidden>Customer-service messages are unavailable in this public preview.</p>
             <form class="support-form" id="support-form">
                 <label><span>Your name</span><input type="text" name="name" maxlength="80" autocomplete="name" required></label>
                 <label><span>Email</span><input type="email" name="email" maxlength="254" autocomplete="email" required></label>
@@ -360,7 +363,7 @@
         </section>
     </div>
 
-    <script src="assets/js/script.js?v=3"></script>
+    <script src="assets/js/script.js?v=4"></script>
 </body>
 
 </html>

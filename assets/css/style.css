@@ -458,9 +458,21 @@ section {
     background: var(--main-color);
 }
 
+.rental-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
 .car-list-status {
     min-height: 1.5rem;
     margin-bottom: 0.8rem;
+    color: var(--text-alter-color);
+    text-align: center;
+}
+
+.preview-note {
+    max-width: 760px;
+    margin: 0.75rem auto 1rem;
     color: var(--text-alter-color);
     text-align: center;
 }
