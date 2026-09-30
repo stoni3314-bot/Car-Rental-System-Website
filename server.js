@@ -32,6 +32,8 @@ const defaultCars = [
 const pendingRegistrationEmails = new Set();
 const dummySalt = "rentmyride-fixed-login-salt";
 const dummyPasswordHash = crypto.scryptSync("invalid-password", dummySalt, 64).toString("hex");
+let adminPasswordSalt = null;
+let adminPasswordHash = null;
 
 const loadEnvironment = async () => {
   try {
@@ -87,11 +89,47 @@ class HttpError extends Error {
   }
 }
 
+const securityHeaders = () => {
+  const headers = {
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Cross-Origin-Opener-Policy": "same-origin",
+  };
+  if (process.env.NODE_ENV === "production") {
+    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+  }
+  return headers;
+};
+
+const enforceSameOriginMutation = (request) => {
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+  if (request.headers["sec-fetch-site"] === "cross-site") {
+    throw new HttpError(403, "Cross-origin requests are not allowed.", "CROSS_ORIGIN_REQUEST");
+  }
+  const source = request.headers.origin || request.headers.referer;
+  if (!source) return;
+  let sourceUrl;
+  try {
+    sourceUrl = new URL(source);
+  } catch {
+    throw new HttpError(403, "Cross-origin requests are not allowed.", "CROSS_ORIGIN_REQUEST");
+  }
+  const forwardedProtocol = String(request.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  const protocol = forwardedProtocol || (request.socket.encrypted ? "https:" : "http:");
+  const expectedOrigin = `${protocol.replace(/:$/, "")}://${request.headers.host}`;
+  if (sourceUrl.origin.toLowerCase() !== expectedOrigin.toLowerCase()) {
+    throw new HttpError(403, "Cross-origin requests are not allowed.", "CROSS_ORIGIN_REQUEST");
+  }
+};
+
 const sendJson = (response, status, value, headers = {}) => {
   response.writeHead(status, {
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8",
-    "X-Content-Type-Options": "nosniff",
+    ...securityHeaders(),
     ...headers,
   });
   response.end(JSON.stringify(value));
@@ -128,7 +166,8 @@ const publicUser = (user, isAdmin = false) => ({ id: user.id, name: user.name, e
 
 const configuredAdminEmail = () => typeof process.env.ADMIN_EMAIL === "string" ? process.env.ADMIN_EMAIL.trim().toLowerCase() : "";
 const adminCredentialsReady = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(configuredAdminEmail())
-  && typeof process.env.ADMIN_PASSWORD === "string" && process.env.ADMIN_PASSWORD.length >= 12;
+  && typeof process.env.ADMIN_PASSWORD === "string" && process.env.ADMIN_PASSWORD.length >= 12
+  && Buffer.byteLength(process.env.ADMIN_PASSWORD, "utf8") <= 1024;
 
 const safeEqual = (left, right) => {
   if (typeof left !== "string" || typeof right !== "string") return false;
@@ -140,7 +179,12 @@ const safeEqual = (left, right) => {
 const cookieToken = (request) => {
   const cookie = request.headers.cookie || "";
   const entry = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("rmr_session="));
-  return entry ? decodeURIComponent(entry.slice("rmr_session=".length)) : "";
+  if (!entry) return "";
+  try {
+    return decodeURIComponent(entry.slice("rmr_session=".length));
+  } catch {
+    return "";
+  }
 };
 
 const tokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
@@ -177,7 +221,8 @@ const sessionCookie = (token, maxAge) => {
 };
 
 const createSession = async (response, user, remember, isAdmin = false) => {
-  const maxAge = remember ? 30 * 24 * 60 * 60 : 12 * 60 * 60;
+  const maxAge = isAdmin ? 4 * 60 * 60 : remember ? 30 * 24 * 60 * 60 : 12 * 60 * 60;
+  const cookieMaxAge = remember && !isAdmin ? maxAge : 0;
   const token = crypto.randomBytes(32).toString("base64url");
   store.sessions = store.sessions.filter((session) => session.expiresAt > Date.now());
   store.sessions.push({
@@ -187,7 +232,7 @@ const createSession = async (response, user, remember, isAdmin = false) => {
     expiresAt: Date.now() + maxAge * 1000,
   });
   await saveStore();
-  return { "Set-Cookie": sessionCookie(token, remember ? maxAge : 0) };
+  return { "Set-Cookie": sessionCookie(token, cookieMaxAge) };
 };
 
 const demoPaymentsEnabled = () => process.env.NODE_ENV !== "production" && process.env.DEMO_PAYMENTS !== "false";
@@ -262,6 +307,36 @@ const enforceAuthRateLimit = (request) => {
   authRateLimits.set(address, current);
   if (authRateLimits.size > 10000) authRateLimits.clear();
   if (current.count > 20) throw new HttpError(429, "Too many attempts. Please try again in 15 minutes.", "RATE_LIMITED");
+};
+
+const adminLoginFailures = new Map();
+const adminLoginKey = (request) => request.socket.remoteAddress || "unknown";
+const enforceAdminLoginLockout = (request) => {
+  const key = adminLoginKey(request);
+  const current = adminLoginFailures.get(key);
+  if (!current) return;
+  if (current.resetAt <= Date.now()) {
+    adminLoginFailures.delete(key);
+    return;
+  }
+  if (current.count >= 5) {
+    throw new HttpError(429, "Administrator login is temporarily locked. Try again in 15 minutes.", "ADMIN_LOGIN_LOCKED");
+  }
+};
+
+const recordFailedAdminLogin = (request) => {
+  const key = adminLoginKey(request);
+  const now = Date.now();
+  const current = adminLoginFailures.get(key);
+  const next = current && current.resetAt > now ? current : { count: 0, resetAt: now + 15 * 60 * 1000 };
+  next.count += 1;
+  adminLoginFailures.set(key, next);
+  if (adminLoginFailures.size > 10000) {
+    for (const [address, entry] of adminLoginFailures) {
+      if (entry.resetAt <= now) adminLoginFailures.delete(address);
+    }
+    if (adminLoginFailures.size > 10000) adminLoginFailures.delete(adminLoginFailures.keys().next().value);
+  }
 };
 
 const supportRateLimits = new Map();
@@ -426,11 +501,13 @@ const handleAuth = async (request, response, pathname) => {
       }
     } else {
       if (adminCredentialsReady() && email === configuredAdminEmail()) {
-        const candidate = crypto.createHash("sha256").update(password).digest("hex");
-        const expected = crypto.createHash("sha256").update(process.env.ADMIN_PASSWORD).digest("hex");
-        if (!safeEqual(candidate, expected)) {
+        enforceAdminLoginLockout(request);
+        const candidate = adminPasswordSalt ? (await scrypt(password, adminPasswordSalt, 64)).toString("hex") : "";
+        if (!adminPasswordHash || !safeEqual(candidate, adminPasswordHash)) {
+          recordFailedAdminLogin(request);
           throw new HttpError(401, "Email or password is incorrect.", "INVALID_CREDENTIALS");
         }
+        adminLoginFailures.delete(adminLoginKey(request));
         user = store.users.find((item) => item.email === email);
         if (!user) {
           user = { id: crypto.randomUUID(), name: "Administrator", email, salt: "", passwordHash: "", createdAt: new Date().toISOString() };
@@ -478,7 +555,7 @@ const serveFile = async (request, response, pathname) => {
   response.writeHead(200, {
     "Cache-Control": path.extname(filePath) === ".html" ? "no-cache" : "public, max-age=3600",
     "Content-Type": mimeTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream",
-    "X-Content-Type-Options": "nosniff",
+    ...securityHeaders(),
   });
   if (request.method === "HEAD") response.end();
   else response.end(contents);
@@ -486,6 +563,7 @@ const serveFile = async (request, response, pathname) => {
 
 const handleRequest = async (request, response) => {
   try {
+    enforceSameOriginMutation(request);
     const url = new URL(request.url, "http://localhost");
     const pathname = url.pathname;
     if (pathname === "/api/config" && request.method === "GET") {
@@ -535,6 +613,10 @@ const handleRequest = async (request, response) => {
 
 const start = async () => {
   await loadEnvironment();
+  if (adminCredentialsReady()) {
+    adminPasswordSalt = crypto.randomBytes(16);
+    adminPasswordHash = (await scrypt(process.env.ADMIN_PASSWORD, adminPasswordSalt, 64)).toString("hex");
+  }
   if (process.env.DATA_DIR) {
     dataDirectory = path.resolve(root, process.env.DATA_DIR);
     dataFile = path.join(dataDirectory, "store.json");

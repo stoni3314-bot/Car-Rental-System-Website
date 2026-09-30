@@ -15,6 +15,8 @@ Open `http://localhost:4174/`.
 
 Set `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` of at least 12 characters in `.env` to enable administrator access. Keep `.env` private; never commit credentials.
 
+Administrator sign-in uses a server-side password hash, a browser-session HTTP-only cookie that expires after four hours, same-origin checks for changes, security response headers, and a temporary lockout after repeated failed admin logins. Use a randomly generated password of 16 or more characters. The lockout is held in memory and resets if the server restarts; for a public deployment, also enable your host's rate limiting and monitoring. Do not use this demo with real customer or payment data.
+
 ## Demo Payments
 
 Checkout is simulated for demonstration only. It does not collect card details, contact a payment provider, charge money, or reserve a real rental. Demo records are labeled `demo_paid`. Real payment order, verification, and webhook endpoints are not available. Demo checkout is disabled in production.

@@ -54,9 +54,13 @@ const stopServer = async ({ child, dataDirectory }) => {
   await fs.rm(dataDirectory, { recursive: true, force: true });
 };
 
-const postJson = (url, body, cookie) => fetch(url, {
+const postJson = (url, body, cookie, origin) => fetch(url, {
   method: "POST",
-  headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
+  headers: {
+    "Content-Type": "application/json",
+    ...(cookie ? { Cookie: cookie } : {}),
+    ...(origin ? { Origin: origin } : {}),
+  },
   body: JSON.stringify(body),
 });
 
@@ -64,8 +68,13 @@ test("public visitors can browse and contact support; only the configured admin 
   const server = await startServer();
   t.after(() => stopServer(server));
 
+  const homeResponse = await fetch(`${server.baseUrl}/`);
+  assert.equal(homeResponse.headers.get("x-frame-options"), "DENY");
+  assert.match(homeResponse.headers.get("content-security-policy"), /frame-ancestors 'none'/);
+
   const carsResponse = await fetch(`${server.baseUrl}/api/cars`);
   assert.equal(carsResponse.status, 200);
+  assert.equal(carsResponse.headers.get("x-content-type-options"), "nosniff");
   assert.equal((await carsResponse.json()).cars.length, 8);
 
   const supportResponse = await postJson(`${server.baseUrl}/api/support`, {
@@ -106,11 +115,24 @@ test("public visitors can browse and contact support; only the configured admin 
   const adminLogin = await postJson(`${server.baseUrl}/api/auth/login`, {
     email: "owner@example.test",
     password: "strong-local-admin-password",
-  });
+  }, undefined, server.baseUrl);
   assert.equal(adminLogin.status, 200);
   const { user } = await adminLogin.json();
   assert.equal(user.isAdmin, true);
+  assert.doesNotMatch(adminLogin.headers.get("set-cookie"), /Max-Age=/i);
   const adminCookie = adminLogin.headers.get("set-cookie").split(";")[0];
+
+  const crossOriginMutation = await fetch(`${server.baseUrl}/api/admin/cars`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "https://attacker.example",
+      "Sec-Fetch-Site": "cross-site",
+      Cookie: adminCookie,
+    },
+    body: JSON.stringify({ name: "Injected car" }),
+  });
+  assert.equal(crossOriginMutation.status, 403);
 
   const ticketsResponse = await fetch(`${server.baseUrl}/api/admin/support`, { headers: { Cookie: adminCookie } });
   const tickets = await ticketsResponse.json();
@@ -153,4 +175,24 @@ test("public visitors can browse and contact support; only the configured admin 
   assert.equal(deleteCar.status, 200);
   const publicCarsAfterDelete = await fetch(`${server.baseUrl}/api/cars`).then((response) => response.json());
   assert.equal(publicCarsAfterDelete.cars.length, 8);
+});
+
+test("administrator login locks out repeated password failures", async (t) => {
+  const server = await startServer();
+  t.after(() => stopServer(server));
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await postJson(`${server.baseUrl}/api/auth/login`, {
+      email: "owner@example.test",
+      password: "incorrect-admin-password",
+    });
+    assert.equal(response.status, 401);
+  }
+
+  const locked = await postJson(`${server.baseUrl}/api/auth/login`, {
+    email: "owner@example.test",
+    password: "strong-local-admin-password",
+  });
+  assert.equal(locked.status, 429);
+  assert.equal((await locked.json()).code, "ADMIN_LOGIN_LOCKED");
 });
