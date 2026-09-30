@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rent My Ride | Car Rental Website</title>
-    <link rel="stylesheet" href="assets/css/style.css?v=4">
+    <title>Car Rental System</title>
+    <link rel="stylesheet" href="assets/css/style.css?v=3">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 
 <body>
     <header class="site-header">
         <nav class="nav container" aria-label="Main navigation">
-            <a href="#home" class="logo">Rent<span>My</span>Ride<span>.</span></a>
+            <a href="#home" class="logo">Car Rental System</a>
 
             <div class="navbar" id="navbar">
                 <a href="#home" class="nav-link">Home</a>
@@ -114,7 +114,6 @@
                 <p>Ride in style, pay less. Travel smart and rent with us.</p>
             </div>
 
-            <p class="preview-note" id="preview-rental-note" hidden>View-only preview. These sample cars cannot be booked from this link.</p>
             <p class="car-list-status" id="car-list-status" role="status" aria-live="polite"></p>
             <div class="rentals-content" id="rentals-content"></div>
         </section>
@@ -228,7 +227,6 @@
                 <h2>Customer Service</h2>
                 <p>Send us a message and our team will get back to you.</p>
             </div>
-            <p class="preview-note" id="preview-support-note" hidden>Login, online payments, bookings, and support messages are disabled in this public preview.</p>
             <form class="support-form" id="support-form">
                 <label><span>Your name</span><input type="text" name="name" maxlength="80" autocomplete="name" required></label>
                 <label><span>Email</span><input type="email" name="email" maxlength="254" autocomplete="email" required></label>
@@ -243,7 +241,7 @@
     <footer class="footer">
         <div class="footer-content container">
             <div class="footer-box">
-                <a href="#home" class="logo">Rent<span>My</span>Ride<span>.</span></a>
+                <a href="#home" class="logo">Car Rental System</a>
                 <p>Kolkata, Newtown | 746595</p>
                 <div class="social">
                     <a href="#" aria-label="Instagram"><i class="ri-instagram-line"></i></a>
@@ -270,7 +268,7 @@
             </button>
             <div id="auth-view">
                 <span class="login-kicker" id="auth-kicker">Welcome back</span>
-                <h2 id="login-title">Login to RentMyRide</h2>
+                <h2 id="login-title">Login to Car Rental System</h2>
                 <p id="auth-description">Sign in to manage your rentals and continue booking.</p>
 
                 <form class="login-form" id="login-form">
@@ -354,15 +352,15 @@
                     <strong id="booking-estimate">Rs. 0</strong>
                 </div>
                 <button type="submit" class="login-submit" id="payment-submit">
-                    <i class="ri-lock-line" aria-hidden="true"></i>
-                    <span id="payment-button-label">Continue to secure payment</span>
+                    <i class="ri-flask-line" aria-hidden="true"></i>
+                    <span id="payment-button-label">Simulate demo payment</span>
                 </button>
-                <p class="login-message" id="payment-message" role="status" aria-live="polite"></p>
+                <p class="login-message" id="payment-message" role="status" aria-live="polite">Demo only. No real payment will be collected.</p>
             </form>
         </section>
     </div>
 
-    <script src="assets/js/script.js?v=5"></script>
+    <script src="assets/js/script.js?v=3"></script>
 </body>
 
 </html>

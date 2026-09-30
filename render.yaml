@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: rentmyride-app
+    name: car-rental-system
     runtime: node
     plan: free
     buildCommand: npm run check

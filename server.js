@@ -137,11 +137,6 @@ const safeEqual = (left, right) => {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 };
 
-const signatureMatches = (expected, received) => {
-  if (typeof received !== "string" || !/^[a-f0-9]{64}$/i.test(received)) return false;
-  return safeEqual(expected.toLowerCase(), received.toLowerCase());
-};
-
 const cookieToken = (request) => {
   const cookie = request.headers.cookie || "";
   const entry = cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("rmr_session="));
@@ -195,8 +190,7 @@ const createSession = async (response, user, remember, isAdmin = false) => {
   return { "Set-Cookie": sessionCookie(token, remember ? maxAge : 0) };
 };
 
-const paymentCredentialsReady = () => Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
-const demoPaymentsEnabled = () => process.env.NODE_ENV !== "production" && process.env.DEMO_PAYMENTS === "true";
+const demoPaymentsEnabled = () => process.env.NODE_ENV !== "production" && process.env.DEMO_PAYMENTS !== "false";
 
 const quoteRental = (body) => {
   const car = store.cars.find((item) => item.id === body.carId);
@@ -212,85 +206,10 @@ const quoteRental = (body) => {
   return { car, days, total: car.dailyRate * days };
 };
 
-const razorpayRequest = async (endpoint, options = {}) => {
-  const credentials = Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString("base64");
-  let response;
-  try {
-    response = await fetch(`https://api.razorpay.com/v1${endpoint}`, {
-      ...options,
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-  } catch {
-    throw new HttpError(502, "Could not reach the payment provider. Please try again.", "PAYMENT_PROVIDER_UNAVAILABLE");
-  }
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = response.status === 401
-      ? "Razorpay rejected the configured keys. Check your test or live credentials."
-      : "The payment provider could not create or verify this payment.";
-    throw new HttpError(502, message, "PAYMENT_PROVIDER_ERROR");
-  }
-  return result;
-};
-
 const parseDate = (value) => {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
-};
-
-const createPaymentOrder = async (request, response) => {
-  const user = requireUser(request);
-  if (!paymentCredentialsReady()) {
-    throw new HttpError(503, "Online payments are not configured. Add Razorpay keys to the .env file.", "PAYMENTS_NOT_CONFIGURED");
-  }
-  const body = await readJson(request);
-  const { car, days, total } = quoteRental(body);
-  const bookingId = crypto.randomUUID();
-  const receipt = `rr_${crypto.randomUUID().replaceAll("-", "").slice(0, 32)}`;
-  const order = await razorpayRequest("/orders", {
-    method: "POST",
-    body: JSON.stringify({
-      amount: total * 100,
-      currency: "INR",
-      receipt,
-      notes: { booking_id: bookingId, car_id: body.carId, user_id: user.id },
-    }),
-  });
-  if (!order.id || order.amount !== total * 100 || order.currency !== "INR") {
-    throw new HttpError(502, "Payment order details did not match the rental total.", "PAYMENT_ORDER_MISMATCH");
-  }
-
-  store.bookings.push({
-    id: bookingId,
-    userId: user.id,
-    carId: body.carId,
-    carName: car.name,
-    dailyRate: car.dailyRate,
-    days,
-    startDate: body.startDate,
-    returnDate: body.returnDate,
-    total,
-    currency: "INR",
-    orderId: order.id,
-    paymentId: null,
-    status: "created",
-    createdAt: new Date().toISOString(),
-  });
-  await saveStore();
-  sendJson(response, 201, {
-    bookingId,
-    orderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
-    keyId: process.env.RAZORPAY_KEY_ID,
-    carName: car.name,
-    days,
-  });
 };
 
 const createDemoPayment = async (request, response) => {
@@ -328,91 +247,6 @@ const createDemoPayment = async (request, response) => {
     carName: car.name,
     days,
   });
-};
-
-const verifyPayment = async (request, response) => {
-  const user = requireUser(request);
-  if (!paymentCredentialsReady()) {
-    throw new HttpError(503, "Online payments are not configured.", "PAYMENTS_NOT_CONFIGURED");
-  }
-  const body = await readJson(request);
-  const orderId = body.razorpay_order_id;
-  const paymentId = body.razorpay_payment_id;
-  const signature = body.razorpay_signature;
-  if (typeof orderId !== "string" || !/^order_[A-Za-z0-9]+$/.test(orderId)
-      || typeof paymentId !== "string" || !/^pay_[A-Za-z0-9]+$/.test(paymentId)) {
-    throw new HttpError(400, "Payment details are incomplete.", "INVALID_PAYMENT_DETAILS");
-  }
-  const booking = store.bookings.find((item) => item.orderId === orderId && item.userId === user.id);
-  if (!booking) throw new HttpError(404, "This payment order was not found.", "ORDER_NOT_FOUND");
-  const expected = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-    .update(`${booking.orderId}|${paymentId}`)
-    .digest("hex");
-  if (!signatureMatches(expected, signature)) {
-    throw new HttpError(400, "Payment signature could not be verified.", "INVALID_PAYMENT_SIGNATURE");
-  }
-  if (booking.status === "paid") {
-    sendJson(response, 200, { status: booking.status, bookingId: booking.id });
-    return;
-  }
-
-  const payment = await razorpayRequest(`/payments/${encodeURIComponent(paymentId)}`);
-  if (payment.order_id !== booking.orderId || payment.amount !== booking.total * 100 || payment.currency !== booking.currency) {
-    throw new HttpError(400, "Payment details do not match this booking.", "PAYMENT_DETAILS_MISMATCH");
-  }
-  if (payment.status !== "captured") {
-    booking.paymentId = paymentId;
-    booking.status = payment.status === "authorized" ? "awaiting_capture" : "failed";
-    await saveStore();
-    sendJson(response, 202, { status: booking.status });
-    return;
-  }
-
-  booking.paymentId = paymentId;
-  booking.status = "paid";
-  booking.paidAt = new Date().toISOString();
-  await saveStore();
-  sendJson(response, 200, { status: booking.status, bookingId: booking.id });
-};
-
-const handlePaymentWebhook = async (request, response) => {
-  if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
-    throw new HttpError(503, "Payment webhook is not configured.", "WEBHOOK_NOT_CONFIGURED");
-  }
-  const raw = await readRawBody(request, 1024 * 1024);
-  const received = request.headers["x-razorpay-signature"];
-  const expected = crypto.createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET).update(raw).digest("hex");
-  if (!signatureMatches(expected, received)) throw new HttpError(400, "Webhook signature could not be verified.", "INVALID_WEBHOOK_SIGNATURE");
-  let event;
-  try {
-    event = JSON.parse(raw.toString("utf8"));
-    if (!event || typeof event !== "object" || Array.isArray(event)) throw new Error("Expected an object");
-  } catch {
-    throw new HttpError(400, "Invalid webhook data.");
-  }
-  const eventId = request.headers["x-razorpay-event-id"];
-  if (eventId && store.webhookEvents.includes(eventId)) {
-    sendJson(response, 200, { received: true });
-    return;
-  }
-
-  const payment = event.payload?.payment?.entity;
-  if (payment?.order_id && ["payment.captured", "payment.failed"].includes(event.event)) {
-    const booking = store.bookings.find((item) => item.orderId === payment.order_id);
-    if (booking && payment.amount === booking.total * 100 && payment.currency === booking.currency) {
-      if (event.event === "payment.captured") {
-        booking.paymentId = payment.id;
-        booking.status = "paid";
-        booking.paidAt = new Date().toISOString();
-      } else if (booking.status !== "paid") {
-        booking.paymentId = payment.id;
-        booking.status = "failed";
-      }
-    }
-  }
-  if (eventId) store.webhookEvents = [...store.webhookEvents, eventId].slice(-1000);
-  await saveStore();
-  sendJson(response, 200, { received: true });
 };
 
 const authRateLimits = new Map();
@@ -656,9 +490,9 @@ const handleRequest = async (request, response) => {
     const pathname = url.pathname;
     if (pathname === "/api/config" && request.method === "GET") {
       sendJson(response, 200, {
-        enabled: paymentCredentialsReady(),
+        enabled: false,
         demoEnabled: demoPaymentsEnabled(),
-        keyId: paymentCredentialsReady() ? process.env.RAZORPAY_KEY_ID : "",
+        keyId: "",
         adminEnabled: adminCredentialsReady(),
       });
       return;
@@ -682,20 +516,8 @@ const handleRequest = async (request, response) => {
       sendJson(response, 200, { bookings });
       return;
     }
-    if (pathname === "/api/payments/order" && request.method === "POST") {
-      await createPaymentOrder(request, response);
-      return;
-    }
     if (pathname === "/api/payments/demo" && request.method === "POST") {
       await createDemoPayment(request, response);
-      return;
-    }
-    if (pathname === "/api/payments/verify" && request.method === "POST") {
-      await verifyPayment(request, response);
-      return;
-    }
-    if (pathname === "/api/payments/webhook" && request.method === "POST") {
-      await handlePaymentWebhook(request, response);
       return;
     }
     if (pathname.startsWith("/api/")) throw new HttpError(404, "Endpoint not found.", "NOT_FOUND");
@@ -718,13 +540,13 @@ const start = async () => {
     dataFile = path.join(dataDirectory, "store.json");
   }
   await loadStore();
-  const port = Number(process.env.PORT) || 4173;
+  const port = Number(process.env.PORT) || 4174;
   const host = process.env.HOST || "127.0.0.1";
   const server = http.createServer((request, response) => void handleRequest(request, response));
-  server.listen(port, host, () => console.log(`RentMyRide listening at http://${host}:${port}`));
+  server.listen(port, host, () => console.log(`Car Rental System listening at http://${host}:${port}`));
 };
 
 start().catch((error) => {
-  console.error("Could not start RentMyRide:", error);
+  console.error("Could not start Car Rental System:", error);
   process.exitCode = 1;
 });

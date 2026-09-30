@@ -21,20 +21,27 @@ const getFreePort = async () => {
   return port;
 };
 
-const startServer = async ({ nodeEnv, demoPayments }) => {
+const startServer = async ({ nodeEnv, demoPayments, razorpayKeys = false }) => {
   const dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "rentmyride-demo-test-"));
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
+  const env = {
+    ...process.env,
+    HOST: "127.0.0.1",
+    PORT: String(port),
+    NODE_ENV: nodeEnv,
+    DATA_DIR: dataDirectory,
+  };
+  if (demoPayments === undefined) delete env.DEMO_PAYMENTS;
+  else env.DEMO_PAYMENTS = String(demoPayments);
+  if (razorpayKeys) {
+    env.RAZORPAY_KEY_ID = "rzp_test_demo_only";
+    env.RAZORPAY_KEY_SECRET = "not-a-real-secret";
+    env.RAZORPAY_WEBHOOK_SECRET = "not-a-real-webhook-secret";
+  }
   const child = spawn(process.execPath, [path.join(projectRoot, "server.js")], {
     cwd: projectRoot,
-    env: {
-      ...process.env,
-      HOST: "127.0.0.1",
-      PORT: String(port),
-      NODE_ENV: nodeEnv,
-      DEMO_PAYMENTS: String(demoPayments),
-      DATA_DIR: dataDirectory,
-    },
+    env,
     stdio: "ignore",
   });
 
@@ -60,8 +67,8 @@ const stopServer = async ({ child, dataDirectory }) => {
   await fs.rm(dataDirectory, { recursive: true, force: true });
 };
 
-test("demo checkout stores an explicitly simulated booking without payment identifiers", async (t) => {
-  const server = await startServer({ nodeEnv: "development", demoPayments: true });
+test("local checkout defaults to an explicitly simulated payment without payment identifiers", async (t) => {
+  const server = await startServer({ nodeEnv: "development" });
   t.after(() => stopServer(server));
 
   const config = await fetch(`${server.baseUrl}/api/config`).then((response) => response.json());
@@ -107,6 +114,16 @@ test("demo checkout stores an explicitly simulated booking without payment ident
   assert.equal(savedStore.bookings[0].orderId, null);
 });
 
+test("local demo payments can be disabled explicitly", async (t) => {
+  const server = await startServer({ nodeEnv: "development", demoPayments: false });
+  t.after(() => stopServer(server));
+
+  const config = await fetch(`${server.baseUrl}/api/config`).then((response) => response.json());
+  assert.equal(config.demoEnabled, false);
+  const response = await fetch(`${server.baseUrl}/api/payments/demo`, { method: "POST" });
+  assert.equal(response.status, 404);
+});
+
 test("production never enables the demo payment endpoint", async (t) => {
   const server = await startServer({ nodeEnv: "production", demoPayments: true });
   t.after(() => stopServer(server));
@@ -115,4 +132,23 @@ test("production never enables the demo payment endpoint", async (t) => {
   assert.equal(config.demoEnabled, false);
   const response = await fetch(`${server.baseUrl}/api/payments/demo`, { method: "POST" });
   assert.equal(response.status, 404);
+});
+
+test("real payment APIs remain unavailable even when provider keys exist", async (t) => {
+  const server = await startServer({ nodeEnv: "development", razorpayKeys: true });
+  t.after(() => stopServer(server));
+
+  const config = await fetch(`${server.baseUrl}/api/config`).then((response) => response.json());
+  assert.equal(config.enabled, false);
+  assert.equal(config.keyId, "");
+  assert.equal(config.demoEnabled, true);
+
+  for (const endpoint of ["order", "verify", "webhook"]) {
+    const response = await fetch(`${server.baseUrl}/api/payments/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    assert.equal(response.status, 404, `${endpoint} must stay disabled`);
+  }
 });

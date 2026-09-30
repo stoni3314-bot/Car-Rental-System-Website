@@ -15,27 +15,6 @@ const emailInput = loginForm.querySelector('input[name="email"]');
 const passwordInput = loginForm.querySelector('input[name="password"]');
 const bookingStart = document.querySelector("#booking-start-date");
 const bookingReturn = document.querySelector("#booking-return-date");
-const isViewOnlyPreview = window.location.hostname.endsWith(".github.io");
-const previewCars = [
-  { id: "rental-1", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 2999, image: "assets/images/rental-1.png" },
-  { id: "rental-2", category: "Mini SUV", name: "Nexon", transmission: "Automatic", dailyRate: 6999, image: "assets/images/rental-2.png" },
-  { id: "rental-3", category: "SUV", name: "Harrier", transmission: "Manual", dailyRate: 4999, image: "assets/images/rental-3.png" },
-  { id: "rental-4", category: "Sedan", name: "Altroz", transmission: "Automatic", dailyRate: 7999, image: "assets/images/rental-4.png" },
-  { id: "rental-5", category: "Sedan", name: "Tigor", transmission: "Manual", dailyRate: 1399, image: "assets/images/rental-5.png" },
-  { id: "rental-6", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 5999, image: "assets/images/rental-6.png" },
-  { id: "rental-7", category: "Mini SUV", name: "Punch", transmission: "Automatic", dailyRate: 1999, image: "assets/images/rental-7.png" },
-  { id: "rental-8", category: "SUV", name: "GTS40", transmission: "Automatic", dailyRate: 11999, image: "assets/images/rental-8.png" },
-];
-
-if (isViewOnlyPreview) {
-  document.body.classList.add("view-only-preview");
-  document.querySelector("#preview-rental-note").hidden = false;
-  document.querySelector("#preview-support-note").hidden = false;
-  document.querySelector("#support-form").hidden = true;
-  document.querySelector("#support .heading p").textContent = "Customer service is unavailable in this view-only preview.";
-  document.querySelector("#newsletter form").hidden = true;
-  document.querySelector("#newsletter p").textContent = "Newsletter sign-up is unavailable in this view-only preview.";
-}
 
 let currentUser = null;
 let authMode = "login";
@@ -120,8 +99,8 @@ const setAuthMode = (mode) => {
   nameInput.required = isRegistering;
   passwordInput.autocomplete = isRegistering ? "new-password" : "current-password";
   passwordInput.placeholder = isRegistering ? "At least 8 characters" : "Your password";
-  document.querySelector("#auth-kicker").textContent = isRegistering ? "Join RentMyRide" : "Welcome back";
-  document.querySelector("#login-title").textContent = isRegistering ? "Create your account" : "Login to RentMyRide";
+  document.querySelector("#auth-kicker").textContent = isRegistering ? "Join Car Rental System" : "Welcome back";
+  document.querySelector("#login-title").textContent = isRegistering ? "Create your account" : "Login to Car Rental System";
   document.querySelector("#auth-description").textContent = isRegistering
     ? "Create an account to book and manage your rentals."
     : "Sign in to manage your rentals and continue booking.";
@@ -164,64 +143,52 @@ const loadBookings = async () => {
   }
 };
 
-const renderCars = (cars) => {
+const loadCars = async () => {
   const grid = document.querySelector("#rentals-content");
+  const status = document.querySelector("#car-list-status");
   grid.replaceChildren();
-  carCatalog = cars;
-  cars.forEach((car) => {
-    const card = document.createElement("article");
-    card.className = "rental-box";
-    const top = document.createElement("div");
-    top.className = "rental-top";
-    const category = document.createElement("h3");
-    category.textContent = car.category;
-    const icon = document.createElement("i");
-    icon.className = "ri-car-line";
-    icon.setAttribute("aria-hidden", "true");
-    top.append(category, icon);
+  try {
+    const { cars } = await api("/api/cars");
+    carCatalog = cars;
+    status.textContent = cars.length ? "" : "No cars are currently listed.";
+    cars.forEach((car) => {
+      const card = document.createElement("article");
+      card.className = "rental-box";
+      const top = document.createElement("div");
+      top.className = "rental-top";
+      const category = document.createElement("h3");
+      category.textContent = car.category;
+      const icon = document.createElement("i");
+      icon.className = "ri-car-line";
+      icon.setAttribute("aria-hidden", "true");
+      top.append(category, icon);
 
-    const image = document.createElement("img");
-    image.src = car.image;
-    image.alt = car.name;
-    image.loading = "lazy";
-    const name = document.createElement("h2");
-    name.textContent = car.name;
-    const transmission = document.createElement("h4");
-    transmission.textContent = car.transmission;
-    const priceButton = document.createElement("div");
-    priceButton.className = "price-btn";
-    const price = document.createElement("p");
-    price.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} `;
-    const perDay = document.createElement("span");
-    perDay.textContent = "/day";
-    price.append(perDay);
-    priceButton.append(price);
-    if (!isViewOnlyPreview) {
+      const image = document.createElement("img");
+      image.src = car.image;
+      image.alt = car.name;
+      image.loading = "lazy";
+      const name = document.createElement("h2");
+      name.textContent = car.name;
+      const transmission = document.createElement("h4");
+      transmission.textContent = car.transmission;
+      const priceButton = document.createElement("div");
+      priceButton.className = "price-btn";
+      const price = document.createElement("p");
+      price.textContent = `Rs. ${Number(car.dailyRate).toLocaleString("en-IN")} `;
+      const perDay = document.createElement("span");
+      perDay.textContent = "/day";
+      price.append(perDay);
       const rent = document.createElement("button");
       rent.type = "button";
       rent.className = "rental-btn";
       rent.dataset.carId = car.id;
       rent.textContent = "Rent";
-      priceButton.append(rent);
-    }
-    card.append(top, image, name, transmission, priceButton);
-    grid.append(card);
-  });
-};
-
-const loadCars = async () => {
-  const status = document.querySelector("#car-list-status");
-  try {
-    const { cars } = await api("/api/cars");
-    renderCars(cars);
-    status.textContent = cars.length ? "" : "No cars are currently listed.";
+      priceButton.append(price, rent);
+      card.append(top, image, name, transmission, priceButton);
+      grid.append(card);
+    });
   } catch {
-    if (isViewOnlyPreview) {
-      renderCars(previewCars);
-      status.textContent = "";
-    } else {
-      status.textContent = "Car list could not be loaded. Please refresh the page.";
-    }
+    status.textContent = "Car list could not be loaded. Please refresh the page.";
   }
 };
 
@@ -339,7 +306,7 @@ const updateBookingEstimate = () => {
   }
   document.querySelector("#booking-days").textContent = `${days} ${days === 1 ? "day" : "days"}`;
   document.querySelector("#booking-estimate").textContent = `Rs. ${(selectedCar.dailyRate * days).toLocaleString("en-IN")}`;
-  paymentButton.disabled = !(paymentConfig.enabled || paymentConfig.demoEnabled);
+  paymentButton.disabled = !paymentConfig.demoEnabled;
 };
 
 const openBooking = (car) => {
@@ -358,31 +325,17 @@ const openBooking = (car) => {
   bookingStart.value = searchStart < bookingStart.min ? bookingStart.min : searchStart;
   bookingReturn.value = searchReturn > bookingStart.value ? searchReturn : addDays(bookingStart.value, 1);
   paymentMessage.textContent = paymentConfig.demoEnabled
-    ? "Demo payment only: no money will be charged and no real rental is reserved."
-    : paymentConfig.enabled
-      ? ""
-      : "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
+    ? "Demo only: no money will be charged and no real rental is reserved."
+    : "Demo checkout is disabled. This site does not accept real payments.";
   updateBookingEstimate();
   showModal(bookingModal, bookingStart);
 };
 
-const loadRazorpay = () => new Promise((resolve, reject) => {
-  if (window.Razorpay) {
-    resolve();
-    return;
-  }
-  const script = document.createElement("script");
-  script.src = "https://checkout.razorpay.com/v1/checkout.js";
-  script.onload = resolve;
-  script.onerror = () => reject(new Error("Secure checkout could not load. Check your internet connection and try again."));
-  document.head.append(script);
-});
-
 const beginPayment = async (event) => {
   event.preventDefault();
   paymentMessage.textContent = "";
-  if (!paymentConfig.enabled && !paymentConfig.demoEnabled) {
-    paymentMessage.textContent = "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
+  if (!paymentConfig.demoEnabled) {
+    paymentMessage.textContent = "Demo checkout is disabled. This site does not accept real payments.";
     return;
   }
   if (!currentUser) {
@@ -394,25 +347,7 @@ const beginPayment = async (event) => {
   paymentButton.classList.add("is-loading");
 
   try {
-    if (paymentConfig.demoEnabled) {
-      const result = await api("/api/payments/demo", {
-        method: "POST",
-        body: JSON.stringify({
-          carId: selectedCar.id,
-          startDate: bookingStart.value,
-          returnDate: bookingReturn.value,
-        }),
-      });
-      paymentMessage.textContent = result.status === "demo_paid"
-        ? "Demo complete. No money was charged and no real rental is reserved."
-        : "Demo payment could not be completed.";
-      await loadBookings();
-      window.setTimeout(() => hideModal(bookingModal), 2200);
-      return;
-    }
-
-    await loadRazorpay();
-    const order = await api("/api/payments/order", {
+    const result = await api("/api/payments/demo", {
       method: "POST",
       body: JSON.stringify({
         carId: selectedCar.id,
@@ -421,52 +356,14 @@ const beginPayment = async (event) => {
       }),
     });
 
-    const checkout = new window.Razorpay({
-      key: order.keyId,
-      amount: order.amount,
-      currency: order.currency,
-      name: "RentMyRide",
-      description: `${order.carName} rental for ${order.days} ${order.days === 1 ? "day" : "days"}`,
-      order_id: order.orderId,
-      prefill: { name: currentUser.name || "", email: currentUser.email },
-      theme: { color: "#5a6d8c" },
-      handler: async (response) => {
-        paymentMessage.textContent = "Verifying your payment...";
-        try {
-          const result = await api("/api/payments/verify", {
-            method: "POST",
-            body: JSON.stringify(response),
-          });
-          paymentMessage.textContent = result.status === "paid"
-            ? "Payment confirmed. Your booking is ready."
-            : result.status === "awaiting_capture"
-              ? "Payment received. Your booking will be confirmed when capture completes."
-              : "Payment did not complete. No booking was confirmed.";
-          await loadBookings();
-          window.setTimeout(() => hideModal(bookingModal), 1800);
-        } catch (error) {
-          paymentMessage.textContent = error.message;
-          paymentButton.disabled = !(paymentConfig.enabled || paymentConfig.demoEnabled);
-          paymentButton.classList.remove("is-loading");
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          paymentButton.disabled = false;
-          paymentButton.classList.remove("is-loading");
-        },
-      },
-    });
-
-    checkout.on("payment.failed", (response) => {
-      paymentMessage.textContent = response.error?.description || "Payment did not complete. Please try again.";
-      paymentButton.disabled = false;
-      paymentButton.classList.remove("is-loading");
-    });
-    checkout.open();
+    paymentMessage.textContent = result.status === "demo_paid"
+      ? "Demo complete. No money was charged and no real rental is reserved."
+      : "Demo payment could not be completed.";
+    await loadBookings();
+    window.setTimeout(() => hideModal(bookingModal), 2200);
   } catch (error) {
     paymentMessage.textContent = error.message;
-    paymentButton.disabled = false;
+    paymentButton.disabled = !paymentConfig.demoEnabled;
     paymentButton.classList.remove("is-loading");
   }
 };
@@ -688,12 +585,12 @@ api("/api/config")
   .then((config) => {
     paymentConfig = config;
     paymentButtonIcon.className = config.demoEnabled ? "ri-flask-line" : "ri-lock-line";
-    paymentButtonLabel.textContent = config.demoEnabled ? "Simulate demo payment" : "Continue to secure payment";
+    paymentButtonLabel.textContent = config.demoEnabled ? "Simulate demo payment" : "Demo checkout disabled";
     if (selectedCar && bookingModal.classList.contains("show")) {
       updateBookingEstimate();
       paymentMessage.textContent = config.demoEnabled
-        ? "Demo payment only: no money will be charged and no real rental is reserved."
-        : config.enabled ? "" : "Online checkout is not configured. Add your Razorpay test keys to the .env file to enable payments.";
+        ? "Demo only: no money will be charged and no real rental is reserved."
+        : "Demo checkout is disabled. This site does not accept real payments.";
     }
   })
   .catch(() => {});
